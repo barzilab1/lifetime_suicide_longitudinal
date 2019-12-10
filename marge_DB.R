@@ -1,4 +1,5 @@
-#read the CSV
+#read the CSV. 
+#TODO: fix columns classes using colClasses 
 PHQ_Data = read_csv("PHQ9_file_for_Elina_with_PNC_FH.csv")
 PNC_Core_Data_clinical = read_csv("PNC_Core_Data_clinical.csv")
 PNC_Core_Data_cognitive = read_csv("PNC_Core_Data_cognitive.csv")
@@ -16,9 +17,7 @@ Environment_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,c(1
 Truma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
 
 Demographics_bucket = merge(PHQ_Data[,c("bblid", "goassessPhqDurMonths")], PNC_Core_Data_demographics[,c(1,2,4:8)])
-sum(is.na(Demographics_bucket$sex)) #0
-sum(is.na(Demographics_bucket$ageAtClinicalAssess1)) #0
-sum(is.na(Demographics_bucket$ageAtCnb1)) #2
+
 
 Family_bucket = merge(Family_bucket, PNC_Core_Data_demographics[,c(1,9:11)])
 Family_bucket = merge(Family_bucket, SepDivorce)
@@ -29,7 +28,7 @@ Cognitive_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive)
 Cognitive_raw_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive_ALTERNATIVE)
 
 
-###df.describe for all the DF
-### pairplot: for every 2 colunms 
-#Calculation of the covariance matrix
+## summary for all the DF
+### heatmap to check correlation 
+
 

@@ -13,7 +13,25 @@ number_NA_col = colSums(is.na(Full_Data))
 hist(Full_Data$AGE_YEARS_AT_CONTACT)
 hist(Full_Data$goassessPhqDurMonths)
 
+#install.packages("reshape2")
+#library(reshape2)
 
+library("PerformanceAnalytics")
+chart.Correlation(mydata, histogram=TRUE, pch=19)
+
+install.packages("caret")
+findCorrelation(x, cutoff = 0.9, verbose = TRUE, names = TRUE, exact = ncol(x) < 15)
+
+summary(Demographics_bucket)
+lapply(Demographics_bucket,class)
+str(Demographics_bucket)
+
+#correllation matrix
+cormat = cor(mydata)
+library(reshape2)
+melted_cormat <- melt(cormat)
+library(ggplot2)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + geom_tile()
 
 
 # turn a date into a 'monthnumber' relative to an origin
@@ -26,7 +44,7 @@ mondf = function(d1, d2) { monnb(d2) - monnb(d1) }
 
 hist(mondf(Full_Data$go1_goassess_date, Full_Data$CONTACT_DATE))
 
-
+sum(is.na(Family_bucket$Parents_Sep_Divorce))
 
 
 

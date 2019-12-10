@@ -16,7 +16,7 @@ The outcomes of interest to you are:
 * 109679 = Sum PHQ-9 score
 * Depression_mod_above_at_phq = Depression in PHQ (0=no, 1=yes)
 
-##### Baskets:
+#### Baskets:
 
 1. Demographics
 2. Clinical
@@ -26,10 +26,10 @@ The outcomes of interest to you are:
 6. Environmental based on family characteristics (i.e., family history of psychiatric disorders, parents separated/together, parental education)
 
 ---
-##### Open Questions:
-Q1. Do we also include kids with Lifetime suicide attempt before goassess time?
-- Don't have the information
-Q2. Do we have data on trauma after goassess time
-- No data after the goassess time except for the PHQ
-Q3. Do we have data on non-suicidal self-harm
-- No
+#### Open Questions:
+**Q1.** Do we also include kids with Lifetime suicide attempt before goassess time?  
+  - Don't have the information  
+**Q2.** Do we have data on trauma after goassess time  
+  - No data after the goassess time except for the PHQ  
+**Q3.** Do we have data on non-suicidal self-harm  
+  - No  
