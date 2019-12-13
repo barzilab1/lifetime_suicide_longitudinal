@@ -1,3 +1,4 @@
+install.packages("readr")
 Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
                                                                PNC_Core_Data_environment, 
                                                                PNC_Core_Data_cognitive, 
@@ -59,4 +60,5 @@ table(Full_Data$Current_Suicidal_Ideation)
 length(which(Full_Data$sui002 == 1 & Full_Data$Current_Suicidal_Ideation == 2))
 length(which(Full_Data$sui002 == 1 & Full_Data$Lifetime_Suicide_Attempt == 2))
 length(which(Full_Data$sui002 == 1 & Full_Data$Lifetime_Suicide_Attempt == 2 & Full_Data$Current_Suicidal_Ideation == 2))
-
+# or
+table(x[,27:28])

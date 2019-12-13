@@ -75,22 +75,22 @@ results <- rep(NA,splits)
 
 for (i in 1:splits) {
 
-splitz <- runif(nrow(x))
-x_train <- x[which(splitz < 0.75),]
-y_train <- y[which(splitz < 0.75)]
-x_test <- x[which(splitz > 0.75),]
-y_test <- y[which(splitz > 0.75)]
-
-mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
-opt_lambda <- mod$lambda.min
-
-mod <- mod$glmnet.fit
-
-y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
-
-results[i] <- cor(cbind(y_predicted,y_test))[2,1]
-results[results <0] <- 0
-results <- results^2
+  splitz <- runif(nrow(x))
+  x_train <- x[which(splitz < 0.75),]
+  y_train <- y[which(splitz < 0.75)]
+  x_test <- x[which(splitz > 0.75),]
+  y_test <- y[which(splitz > 0.75)]
+  
+  mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
+  opt_lambda <- mod$lambda.min
+  
+  mod <- mod$glmnet.fit
+  
+  y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
+  
+  results[i] <- cor(cbind(y_predicted,y_test))[2,1]
+  results[results <0] <- 0
+  results <- results^2
 
 }
 
@@ -111,7 +111,11 @@ rsq
 
 
 
-
+library(Amelia)
+x <- read.csv("data.csv")
+x <- x[,-1]
+set.seed(2)
+x <- amelia(x,m=1,ords=c(1,2,3))$imputations[[1]]
 
 
 
