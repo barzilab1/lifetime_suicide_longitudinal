@@ -4,7 +4,7 @@ The primary analyses that we will do will involve the lifetime suicide attempt.
 
 Overall there are:
 
-* 939 participants, 
+* 929 participants, 
 * 49 lifetime suicide attempts, 
 * 33 current suicidal ideation  
 * 95 current depression.
@@ -29,7 +29,9 @@ The outcomes of interest to you are:
 #### Open Questions:
 **Q1.** Do we also include kids with Lifetime suicide attempt before goassess time?  
   - Don't have the information  
+
 **Q2.** Do we have data on trauma after goassess time  
   - No data after the goassess time except for the PHQ  
+
 **Q3.** Do we have data on non-suicidal self-harm  
   - No  
