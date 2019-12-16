@@ -17,7 +17,7 @@ Family_bucket = merge(Family_bucket, PNC_Core_Data_demographics[,c(1,9:11)])
 Family_bucket = merge(Family_bucket, SepDivorce)
 
 Environment_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,c(1:16)])
-Truma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
+trauma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
 
 Demographics_bucket = merge(PHQ_Data[,c("bblid", "goassessPhqDurMonths")], PNC_Core_Data_demographics[,c(1,2,4:8)])
 
