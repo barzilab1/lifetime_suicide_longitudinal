@@ -1,3 +1,5 @@
+library("readr")
+
 #read the CSV. 
 #TODO: fix columns classes using colClasses 
 PHQ_Data = read_csv("PHQ9_file_for_Elina_with_PNC_FH.csv")
@@ -17,7 +19,7 @@ Family_bucket = merge(Family_bucket, PNC_Core_Data_demographics[,c(1,9:11)])
 Family_bucket = merge(Family_bucket, SepDivorce)
 
 Environment_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,c(1:16)])
-trauma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
+Trauma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
 
 Demographics_bucket = merge(PHQ_Data[,c("bblid", "goassessPhqDurMonths")], PNC_Core_Data_demographics[,c(1,2,4:8)])
 
@@ -31,7 +33,16 @@ Y_bucket[,c("Current_Suicidal_Ideation","Lifetime_Suicide_Attempt")] = Y_bucket[
 
 
 
+#TODO check na%
+Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
+                                                               PNC_Core_Data_environment, 
+                                                               PNC_Core_Data_cognitive, 
+                                                               PNC_Core_Data_cognitive_ALTERNATIVE,
+                                                               PNC_Core_Data_clinical,
+                                                               PNC_Core_Data_demographics,
+                                                               SepDivorce))
 
-
-
-
+number_NA = sum(is.na(Full_Data))
+number_NA_col = colSums(is.na(Full_Data))
+data_dim = dim(Full_Data) 
+number_NA/(data_dim[1]*data_dim[2]) #0.11

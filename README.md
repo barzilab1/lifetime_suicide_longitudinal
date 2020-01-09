@@ -9,7 +9,7 @@ Overall there are:
 * 33 current suicidal ideation  
 * 95 current depression
 
-The outcomes of interest to you are:
+The outcomes of features:
 
 * 109677 = Current suicidal ideation (0=no, 1=yes)
 * 109678 = Lifetime suicide attempt (0=no, 1=yes)

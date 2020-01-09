@@ -21,8 +21,10 @@ amelia_fit <- amelia(Family_bucket,idvars=c("bblid"), noms = c("Parents_Sep_Divo
 
 
 summary(amelia_fit)
-# x = merge(Y_bucket,Family_bucket)
+
 fam_b = amelia_fit$imputations[[5]]
+
+##############
 x = merge(Y_bucket,fam_b)
 
 # make object to receive data
@@ -60,11 +62,6 @@ summary(mod_resid)
 # CV example
 
 x = merge(Y_bucket,fam_b)
-# x = x[!is.na(x$Ran_substance_FH ),]
-# x = x[!is.na(x$fedu1 ),]
-# x = x[!is.na(x$medu1 ),]
-# x = x[!is.na(x$Parents_Sep_Divorce ),]
-# x = x[!is.na(x$Ran_Sui_attempt_or_death_FH),] 
 x = x[!is.na(x$Current_Suicidal_Ideation),]
 
 summary(x)
