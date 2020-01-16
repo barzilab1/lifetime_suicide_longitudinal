@@ -1,12 +1,29 @@
 library(PerformanceAnalytics)
 
+
 summary(Environment_bucket)
-#TODO what to do with neighborhoodCrime? 544 out of 929 (59%) are missing
-chart.Correlation(Environment_bucket[,-1], histogram=TRUE, pch=19)
+#remove neighborhoodCrime. 542 out of 922 (59%) are missing
+Environment_bucket = Environment_bucket[,! names(Environment_bucket) %in% c("neighborhoodCrime")]
+#remove MedianFamilyIncome <0 , 556 620 => -2906.436 -13763.194
+Environment_bucket = Environment_bucket[Environment_bucket$MedianFamilyIncome >= 0,]
+describe(Environment_bucket)
+chart.Correlation(Environment_bucket[,-1])
+boxplot(Environment_bucket[,-1])
 
+#shift outliers values
+Environment_bucket_trimmed = winsor(Environment_bucket[,-1],trim=0.005)
+Environment_bucket_trimmed = data.frame(Environment_bucket$bblid, Environment_bucket_trimmed)
+colnames(Environment_bucket_trimmed)[1] <- "bblid"
+summary(Environment_bucket_trimmed)
+boxplot(Environment_bucket_trimmed[,-1])
 
-##################
+#######################################
+#original data
 x = merge(Y_bucket,Environment_bucket)
+
+#trimmed data
+# x = merge(Y_bucket,Environment_bucket_trimmed)
+
 
 # make object to receive data. remove bblid
 resids <- matrix(NA,nrow(Environment_bucket),ncol(Environment_bucket)-1)
@@ -40,44 +57,45 @@ summary(mod_raw)
 summary(mod_resid)
 
 
-######################
-x = merge(Y_bucket,Environment_bucket[,-16])
-x = x[!is.na(x$Current_Suicidal_Ideation),]
+###########################################
 
-summary(x)
-y = x$Current_Suicidal_Ideation
-x = x[,-c(1:5)]
+# CV example
 
+#original data
+x_total = merge(Y_bucket,Environment_bucket)
+
+#trimmed data
+# x_total = merge(Y_bucket,Environment_bucket_trimmed)
+
+y = x_total[, c(2:5)]
+x = x_total[,-c(1:5)]
 
 set.seed(42)
 lambdas <- 10^seq(3, -2, by = -.1)
 splits <- 10
-results <- rep(NA,splits)
+results <- matrix(NA,splits,3)
+colnames(results) <- paste(colnames(y[,c(1:3)]))
 
-
-
-for (i in 1:splits) {
+#go over every y
+for (j in 1:3){
   
-  splitz <- runif(nrow(x))
-  x_train <- x[which(splitz < 0.75),]
-  y_train <- y[which(splitz < 0.75)]
-  x_test <- x[which(splitz > 0.75),]
-  y_test <- y[which(splitz > 0.75)]
-  
-  mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
-  opt_lambda <- mod$lambda.min
-  
-  mod <- mod$glmnet.fit
-  
-  y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
-  
-  results[i] <- cor(cbind(y_predicted,y_test))[2,1]
-  #results[results <0] <- 0
-  #results <- results^2
-  
+  #split the data splits times to 75% training and 25% test
+  for (i in 1:splits) {
+    
+    splitz <- runif(nrow(x))
+    x_train <- x[which(splitz < 0.75),]
+    y_train <- y[which(splitz < 0.75),j]
+    x_test <- x[which(splitz > 0.75),]
+    y_test <- y[which(splitz > 0.75),j]
+    
+    
+    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
+    opt_lambda <- mod$lambda.min
+    
+    mod <- mod$glmnet.fit
+    
+    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
+    
+    results[i,j] <- cor(cbind(y_predicted,y_test))[2,1]
+  }
 }
-
-# coef(mod)
-# summary(mod)
-# mod$coefficients
-

@@ -17,11 +17,23 @@ hist(Full_Data$goassessPhqDurMonths)
 #install.packages("reshape2")
 #library(reshape2)
 
+#correllation matrix
 library("PerformanceAnalytics")
 chart.Correlation(mydata, histogram=TRUE, pch=19)
 
+cormat = cor(Demographics_bucket)
+melted_cormat = melt(cormat)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + geom_tile()
+#pairs.panels(Demographics_bucket, scale=TRUE)
+
 install.packages("caret")
 findCorrelation(x, cutoff = 0.9, verbose = TRUE, names = TRUE, exact = ncol(x) < 15)
+
+
+#get index of a column 
+which(names(Cognitive_bucket_combined)=="er40_m_rtcr")
+x = x[!is.na(x$Current_Suicidal_Ideation),]
+
 
 summary(Demographics_bucket)
 lapply(Demographics_bucket,class)

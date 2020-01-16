@@ -35,3 +35,7 @@ The outcomes of features:
 
 **Q3.** Do we have data on non-suicidal self-harm  
   - No  
+  
+**Q4.** what to do with neighborhoodCrime? 542 out of 922 (59%) are missing
+  - We add them to the model later and see their impact 
+  

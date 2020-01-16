@@ -1,6 +1,7 @@
 library(Amelia)
 library(PerformanceAnalytics)
 library(parcor)
+library(psych)
 
 
 summary(Demographics_bucket) 
@@ -32,29 +33,38 @@ Demographics_bucket$age = rowMeans(data.frame(Demographics_bucket$ageAtClinicalA
 Demographics_bucket = subset(Demographics_bucket, select=-c(ageAtClinicalAssess1,ageAtCnb1))
 
 
-#create 2 variables for race 2 
+#create 2 variables for race2 
 Demographics_bucket$race2_White = ifelse(Demographics_bucket$race2 == 1 , 1, 0)
 Demographics_bucket$race2_Black = ifelse(Demographics_bucket$race2 == 2 , 1, 0)
 #remove race2
 Demographics_bucket = subset(Demographics_bucket, select=-c(race2))
 
+#change sex and ethnicity range from [1,2] to [0,1]
+Demographics_bucket[,c("sex","ethnicity")] =  Demographics_bucket[,c("sex","ethnicity")] -1
+
 
 summary(Demographics_bucket) 
+chart.Correlation(Demographics_bucket[,-1])
+describe(Demographics_bucket)
+boxplot(Demographics_bucket[,-1])
+
+#shift outliers (edu)
+#TODO changes also ages
+Demographics_bucket_trimmed = winsor(Demographics_bucket[,-1],trim=0.005)
+Demographics_bucket_trimmed = data.frame(Y_bucket$bblid, Demographics_bucket_trimmed)
+colnames(Demographics_bucket_trimmed)[1] <- "bblid"
+summary(Demographics_bucket_trimmed) 
+boxplot(Demographics_bucket_trimmed[,-1])
 
 
-#correllation matrix
-cormat = cor(Demographics_bucket)
-melted_cormat = melt(cormat)
-ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + geom_tile()
-#pairs.panels(Demographics_bucket, scale=TRUE)
-
-chart.Correlation(Demographics_bucket[,-1], histogram=TRUE, pch=19)
-
-
-################################### TEST 
-
+###################################  
+#original data
 x = merge(Y_bucket,Demographics_bucket)
 demo_b = Demographics_bucket[,-1]
+
+#trimmed data
+# x = merge(Y_bucket,Demographics_bucket_trimmed)
+# demo_b = Demographics_bucket_trimmed[,-1]
 
 # make object to receive data
 resids <- matrix(NA,nrow(demo_b),ncol(demo_b))
@@ -71,7 +81,7 @@ colnames(resids) <- paste(colnames(demo_b),"_res",sep="")
 # add residual columns to data frame
 x <- data.frame(x,resids)
 
-#over fitted. use different model
+
 mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(demo_b),data=x,family="binomial")
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_raw)
@@ -82,70 +92,63 @@ mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
 summary(mod_raw)
 summary(mod_resid)
 
+mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(demo_b),data=x,family="binomial")
+mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
+summary(mod_raw)
+summary(mod_resid)
+
 ######################
 
 # CV example
 
-# read in data
-x1 <- read.csv("PHQ9_file_for_Elina_with_PNC_FH.csv")
-x2 <- read.csv("PNC_Core_Data_demographics.csv")
-x3 <- read.csv("PNC_Core_Data_cognitive.csv")
-x <- merge(x2,x1,by=1,all=TRUE)
-x <- merge(x,x3,by=1,all=TRUE)
-x <- x[which(is.na(x$Lifetime_Suicide_Attempt) == FALSE),]
-x <- x[which(is.na(x$abf_ar_z) == FALSE),]
-x[,27:28] <- x[,27:28]-1
-sex <- x$sex
-age <- x$AGE_YEARS_AT_CONTACT
-cog <- x[,36:61]
+#original data
+x_total = merge(Y_bucket,Demographics_bucket)
+
+#trimmed data
+# x_total = merge(Y_bucket,Demographics_bucket_trimmed)
+
+y = x_total[, c(2:5)]
+x = x_total[,-c(1:5)]
+
+set.seed(42)
 lambdas <- 10^seq(3, -2, by = -.1)
 splits <- 10
+results <- matrix(NA,splits,3)
+colnames(results) <- paste(colnames(y[,c(1:3)]))
 
-y <- x$Lifetime_Suicide_Attempt
-x <- data.frame(cog,sex,age)
-results <- rep(NA,splits)
+#go over every y
+for (j in 1:3){
 
-for (i in 1:splits) {
-  
-  splitz <- runif(nrow(x))
-  x_train <- x[which(splitz < 0.75),]
-  y_train <- y[which(splitz < 0.75)]
-  x_test <- x[which(splitz > 0.75),]
-  y_test <- y[which(splitz > 0.75)]
-  
-  
-  ## play with alpha
-  mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
-  opt_lambda <- mod$lambda.min
-  
-  mod <- mod$glmnet.fit
-  
-  y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
-  
-  results[i] <- cor(cbind(y_predicted,y_test))[2,1]
-  results[results <0] <- 0
-  results <- results^2
-  
+  #split the data splits times to 75% training and 25% test
+  for (i in 1:splits) {
+    
+    splitz <- runif(nrow(x))
+    x_train <- x[which(splitz < 0.75),]
+    y_train <- y[which(splitz < 0.75),j]
+    x_test <- x[which(splitz > 0.75),]
+    y_test <- y[which(splitz > 0.75),j]
+    
+    ## play with alpha
+    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
+    opt_lambda <- mod$lambda.min
+    
+    mod <- mod$glmnet.fit
+    
+    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
+    
+    results[i,j] <- cor(cbind(y_predicted,y_test))[2,1]
+  }
 }
 
 
 
-
-
-
-
 # Sum of Squares Total and Error
-sst <- sum((y - mean(y))^2)
-sse <- sum((y_predicted - y)^2)
-
+# sst <- sum((y - mean(y))^2)
+# sse <- sum((y_predicted - y)^2)
+# 
 # R squared
-rsq <- 1 - sse / sst
-rsq
+# rsq <- 1 - sse / sst
+# rsq
 #> [1] 0.9318896
 
 
-
-
-
-
-## random forest tree
