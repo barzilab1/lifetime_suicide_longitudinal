@@ -1,4 +1,5 @@
 install.packages("readr")
+install.packages("regclass")s
 Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
                                                                PNC_Core_Data_environment, 
                                                                PNC_Core_Data_cognitive, 
@@ -74,3 +75,114 @@ length(which(Full_Data$sui002 == 1 & Full_Data$Lifetime_Suicide_Attempt == 2))
 length(which(Full_Data$sui002 == 1 & Full_Data$Lifetime_Suicide_Attempt == 2 & Full_Data$Current_Suicidal_Ideation == 2))
 # or
 table(x[,27:28])
+
+
+#################### confusionMatrix
+library(e1071)
+library(ROCR)
+
+y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="response")
+
+y_predicted_class = ifelse(y_predicted>=cutoff,1,0)
+
+sensitivity_res[i,j] = confusionMatrix(as.factor(y_predicted_class),reference = as.factor(y_test), positive = "1")$byClass["Sensitivity"]
+
+results[i,j] = mean(y_predicted==y_test)
+
+
+#################### cutoff
+library(e1071)
+library(caret)
+library(ROCR)
+
+y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="response")
+
+pred <- prediction(y_predicted, y_test)
+# calculate cutoff with max sensitivity 
+perf <- performance(pred,"tpr","fpr")
+# plot(perf,colorize=FALSE, col="black") 
+# lines(c(0,1),c(0,1),col = "gray", lty = 4 )
+index.tpr = which(perf@y.values[[1]] == max(perf@y.values[[1]]))
+min.fpr = min(perf@x.values[[1]][index.tpr]) 
+index.fpr = which(perf@x.values[[1]] == min.fpr)[1] #incase there is mire then one index
+cutoff[i,j] = perf@alpha.values[[1]][index.fpr]
+
+
+
+################## laso 
+set.seed(42)  # Set seed for reproducibility
+
+n <- 1000  # Number of observations
+p <- 5000  # Number of predictors included in model
+real_p <- 15  # Number of true predictors
+
+## Generate the data
+x <- matrix(rnorm(n*p), nrow=n, ncol=p)
+y <- apply(x[,1:real_p], 1, sum) + rnorm(n)
+
+## Split data into training and testing datasets.
+## 2/3rds of the data will be used for Training and 1/3 of the
+## data will be used for Testing.
+train_rows <- sample(1:n, .66*n)
+x.train <- x[train_rows, ]
+x.test <- x[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+list.of.fits <- list()
+
+
+
+## The following loop uses 10-fold Cross Validation to determine the
+## optimal value for lambda for alpha = 0, 0.1, ... , 0.9, 1.0
+## using the Training dataset.
+for (i in 0:10) {
+  
+  fit.name <- paste0("alpha", i/10)
+  
+  list.of.fits[[fit.name]] <-
+    cv.glmnet(x.train, y.train, type.measure ="mse", alpha=i/10, 
+              family="gaussian")
+}
+
+## Now we see which alpha (0, 0.1, ... , 0.9, 1) does the best job
+## predicting the values in the Testing dataset.
+results <- data.frame()
+for (i in 0:10) {
+  fit.name <- paste0("alpha", i/10)
+  
+  ## Use each model to predict 'y' given the Testing dataset
+  predicted <- 
+    predict(list.of.fits[[fit.name]], 
+            s=list.of.fits[[fit.name]]$lambda.1se, newx=x.test)
+  
+  ## Calculate the Mean Squared Error...
+  mse <- mean((y.test - predicted)^2)
+  
+  ## Store the results
+  temp <- data.frame(alpha=i/10, mse=mse, fit.name=fit.name)
+  results <- rbind(results, temp)
+}
+
+## View the results
+results
+
+
+#ridge
+#take the best lanbda for the model
+apply(results, 2, max)
+inds = apply(results, 2, which.max)
+
+#Current_Suicidal_Ideation
+loc = inds[1]
+
+coefs <- coef(models[[loc]], s=models[[loc]]$lambda)
+
+data.frame(
+  features = coefs@Dimnames[[1]][ which(coefs != 0 ) ], #intercept included
+  coefs    = coefs              [ which(coefs != 0 ) ]  #intercept included
+)
+
+install.packages("h2o")
+

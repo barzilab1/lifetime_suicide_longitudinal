@@ -91,6 +91,8 @@ for (i in 1:splits) {
   results[i] <- cor(cbind(y_predicted,y_test))[2,1]
   results[results <0] <- 0
   results <- results^2
+  
+  # results[i,j] = mean(y_predicted==y_test)
 
 }
 

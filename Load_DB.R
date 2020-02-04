@@ -8,6 +8,7 @@ PNC_Core_Data_cognitive = read_csv("PNC_Core_Data_cognitive.csv")
 PNC_Core_Data_cognitive_ALTERNATIVE = read_csv("PNC_Core_Data_cognitive_ALTERNATIVE.csv")
 PNC_Core_Data_demographics = read_csv("PNC_Core_Data_demographics.csv")
 PNC_Core_Data_environment = read_csv("PNC_Core_Data_environment.csv")
+GO1_Substance_Use = read_csv("n9462_substance_go1_052215.csv")
 SepDivorce = read_csv("SepDivorce.csv")
 
 
@@ -29,22 +30,26 @@ Demographics_bucket = merge(PHQ_Data[,c("bblid", "goassessPhqDurMonths")], PNC_C
 Demographics_bucket = merge(Y_bucket[,c("bblid")],Demographics_bucket )
 
 Clinical_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_clinical)
+Clinical_bucket = merge(Clinical_bucket, PNC_Core_Data_demographics[,c(1,6)])
+Substance_bucket = merge(Y_bucket[,c("bblid")], GO1_Substance_Use[,c(1,76:89)])
 
 Cognitive_raw_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive_ALTERNATIVE)
 Cognitive_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive)
 
-
 ##Y_bucket
 Y_bucket[,c("Current_Suicidal_Ideation","Lifetime_Suicide_Attempt")] = Y_bucket[,c("Current_Suicidal_Ideation","Lifetime_Suicide_Attempt")] -1
 
+#TODO calculate cor between Y features 
 
-#check na%
+
+#check na% - need to check with cognetive combined!
 Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
                                                                PNC_Core_Data_environment, 
                                                                PNC_Core_Data_cognitive, 
                                                                PNC_Core_Data_cognitive_ALTERNATIVE,
                                                                PNC_Core_Data_clinical,
                                                                PNC_Core_Data_demographics,
+                                                               Substance_bucket,
                                                                SepDivorce))
 
 number_NA = sum(is.na(Full_Data))
