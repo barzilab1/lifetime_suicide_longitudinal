@@ -1,9 +1,6 @@
 library(PerformanceAnalytics)
 library(psych)
 library(pscl)
-library(glmnet)
-library(ROCR)
-
 
 summary(Environment_bucket[,-1])
 
@@ -29,55 +26,101 @@ chart.Correlation(Environment_bucket_trimmed[,-1])
 
 
 #scale 
-Environment_bucket[,-1] = scale(Environment_bucket[,-1]) 
-Environment_bucket_trimmed[,-1] = scale(Environment_bucket_trimmed[,-1]) 
+Environment_bucket_scaled = Environment_bucket
+Environment_bucket_scaled[,-1] = scale(Environment_bucket[,-1])
+summary(Environment_bucket_scaled)
+
+# Environment_bucket_trimmed_scaled = data.frame(Environment_bucket[,c(1,5)], scale(Environment_bucket_trimmed[,-c(1,5)]))
+Environment_bucket_trimmed_scaled = Environment_bucket_trimmed
+Environment_bucket_trimmed_scaled[,-1] = scale(Environment_bucket_trimmed[,-1])
+summary(Environment_bucket_trimmed_scaled)
 
 #######################################
+#Logistic regression 
+
 #trimmed data
-x = merge(Y_bucket,Environment_bucket_trimmed)
-enviro_b = Environment_bucket_trimmed[,-1]
+x = merge(Y_bucket,Environment_bucket_trimmed_scaled)
+enviro_b = Environment_bucket_trimmed_scaled[,-1]
 
 #original data
-x = merge(Y_bucket,Environment_bucket)
-enviro_b = Environment_bucket[,-1]
+x = merge(Y_bucket,Environment_bucket_scaled)
+enviro_b = Environment_bucket_scaled[,-1]
 
 
-# make object to receive data. remove bblid
-resids <- matrix(NA,nrow(enviro_b),ncol(enviro_b))
-
-# loop through each column, predict it with all other variables, and take residuals. except bblid
-for (j in 1:ncol(enviro_b)) {
-  mod <- lm(enviro_b[,j]~as.matrix(enviro_b[,-j]),data=enviro_b,na.action=na.exclude)
-  resids[,j] <- scale(residuals(mod,na.action=na.exclude))
-}
-
-# append "res" to column names
-colnames(resids) <- paste(colnames(enviro_b),"_res",sep="")
+resids = create_resids(enviro_b)
 
 # add residual columns to data frame
 x <- data.frame(x,resids)
 
+
+### Lifetime_Suicide_Attempt
 set.seed(42)
 mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(enviro_b),data=x,family="binomial")
 summary(mod_raw)
+get_logistic_results(mod_raw)[-1,]
 pR2(mod_raw)
+
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
+get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
-set.seed(42)
+
+####when running only with MedianFamilyIncome also negative 
+# x= merge(Y_bucket,Environment_bucket)
+# mod_raw <- glm(Lifetime_Suicide_Attempt~MedianFamilyIncome,data=x,family="binomial")
+# summary(mod_raw)
+
+
+# Run with the opposit (multiply with -1) of all negative features 
+
+#trimmed data
+temp_data = Environment_bucket_trimmed
+
+#origianl data
+temp_data = Environment_bucket
+
+
+#regressed regression
+temp_data$PWhite = temp_data$PWhite * -1
+temp_data$PercentMarried = temp_data$PercentMarried * -1
+temp_data$MedianFamilyIncome = temp_data$MedianFamilyIncome * -1
+temp_data$PercentHighSchoolPlus = temp_data$PercentHighSchoolPlus * -1
+temp_data$MED_AGE = temp_data$MED_AGE * -1
+summary(temp_data)
+
+#scale 
+temp_data[,-1] = scale(temp_data[,-1])
+
+x = merge(Y_bucket,temp_data)
+enviro_b = temp_data[,-1]
+
+resids = create_resids(enviro_b)
+
+# add residual columns to data frame
+x <- data.frame(x,resids)
+
+#regressed regression
+mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+summary(mod_resid)
+get_logistic_results(mod_resid)[-1,]
+pR2(mod_resid)
+
+
+### Current_Suicidal_Ideation
+# set.seed(42)
 # mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(enviro_b,data=x,family="binomial")
-mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
+# mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
 # summary(mod_raw)
-summary(mod_resid)
-pR2(mod_resid)
+# summary(mod_resid)
+# pR2(mod_resid)
 
-set.seed(42)
+# set.seed(42)
 # mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(enviro_b,data=x,family="binomial")
-mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
+# mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
 # summary(mod_raw)
-summary(mod_resid)
-pR2(mod_resid)
+# summary(mod_resid)
+# pR2(mod_resid)
 
 
 ###########################################
@@ -87,70 +130,20 @@ pR2(mod_resid)
 x_total = merge(Y_bucket,Environment_bucket_trimmed)
 
 #original data
-x_total = merge(Y_bucket,Environment_bucket)
+# x_total = merge(Y_bucket,Environment_bucket)
 
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-lambdas <- 10^seq(3, -2, by = -.1)
-splits <- 100
-lasso_auc <- matrix(NA,splits,3)
-colnames(lasso_auc) <- paste(colnames(y[,c(1:3)]))
-lambds_max <- matrix(nrow = splits,ncol = 3)
+run_lasso(x,y,2)
 
-#go over every y
-set.seed(42)
-for (j in 1:3){
-  
-  #split the data splits times to 75% training and 25% test
-  for (i in 1:splits) {
-
-    splitz <- runif(nrow(x))
-    x_train <- x[which(splitz < 0.75),]
-    y_train <- y[which(splitz < 0.75),j]
-    x_test <- x[which(splitz > 0.75),]
-    y_test <- y[which(splitz > 0.75),j]
-    
-    #find best lambda
-    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial",lambda=lambdas)
-    opt_lambda <- mod$lambda.min
-    lambds_max[i,j] <- opt_lambda
-    mod <- mod$glmnet.fit
-    
-    
-    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="response")
-    
-    pred <- prediction(y_predicted, y_test)
-    lasso_auc[i,j] <- performance(pred, measure = "auc")@y.values[[1]]
-  
-  }
-}
-
-
-#take the best lanbda for the model
-apply(lasso_auc, 2, max, na.rm=TRUE)
-inds = apply(lasso_auc, 2, which.max)
-
-#Lifetime_Suicide_Attempt
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,2], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[2],2])
-
-#Current_Suicidal_Ideation
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,1], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[1],1])
-
-#Depression_mod_above_at_phq
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,3], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[3],3])
 
 ##########################################
 #features selection according to the lasso
 
 ####Lifetime_Suicide_Attempt 
+### as there is no clear "knee" in the graph, select according to the avg. 
 
 #trimmed data
 x = merge(Y_bucket,Environment_bucket_trimmed[,c("bblid","MedianFamilyIncome","PWhite", 
@@ -159,47 +152,67 @@ enviro_b = Environment_bucket_trimmed[,c("MedianFamilyIncome","PWhite", "Percent
 
 
 #original data
-x = merge(Y_bucket,Environment_bucket[,c("bblid","MedianFamilyIncome","PWhite", "PercentHighSchoolPlus")])
-enviro_b = Environment_bucket[,c("MedianFamilyIncome","PWhite", "PercentHighSchoolPlus")]
+# x = merge(Y_bucket,Environment_bucket_scaled[,c("bblid")])
+# enviro_b = Environment_bucket_scaled[,c()]
 
-
-# make object to receive data. remove bblid
-resids <- matrix(NA,nrow(enviro_b),ncol(enviro_b))
-
-# loop through each column, predict it with all other variables, and take residuals. except bblid
-for (j in 1:ncol(enviro_b)) {
-  mod <- lm(enviro_b[,j]~as.matrix(enviro_b[,-j]),data=enviro_b,na.action=na.exclude)
-  resids[,j] <- scale(residuals(mod,na.action=na.exclude))
-}
-
-# append "res" to column names
-colnames(resids) <- paste(colnames(enviro_b),"_res",sep="")
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
+resids = create_resids(enviro_b)
 
 set.seed(42)
 mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(enviro_b),data=x,family="binomial")
 summary(mod_raw)
+get_logistic_results(mod_raw)[-1,]
 pR2(mod_raw)
+
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
+get_logistic_results(mod_resid)[-1,]
+pR2(mod_resid)
+
+
+# Run with the opposit (multiply with -1) of all negative features 
+
+#trimmed data
+temp_data = Environment_bucket_trimmed[,c("bblid","MedianFamilyIncome","PWhite", "PercentHighSchoolPlus")]
+
+#origianl data
+# temp_data = Environment_bucket[,c("bblid")]
+
+#regressed regression
+temp_data[,-1] = temp_data[,-1] *-1
+
+
+#scale 
+temp_data[,-1] = scale(temp_data[,-1])
+
+x = merge(Y_bucket,temp_data)
+enviro_b = temp_data[,-1]
+
+resids = create_resids(enviro_b)
+
+# add residual columns to data frame
+x <- data.frame(x,resids)
+
+#regressed regression
+mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+summary(mod_resid)
+get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
 
 
-####Current_Suicidal_Ideation 
-mod_raw <- glm(Current_Suicidal_Ideation ~ PercentEnglishSpeakers_res + PercentHighSchoolPlus_res + 
-                                           MedianFamilyIncome_res ,data=x,family="binomial")
-summary(mod_raw)
-pR2(mod_raw)
 
-mod_raw <- glm(Depression_mod_above_at_phq ~ MedianFamilyIncome + PercentInPoverty + 
-                                             PercentNonfamilyHouseholds + PercentWithChildren 
-                                             ,data=x,family="binomial")
-summary(mod_raw)
-pR2(mod_raw)
+
+####Current_Suicidal_Ideation 
+# mod_raw <- glm(Current_Suicidal_Ideation ~ PercentEnglishSpeakers_res + PercentHighSchoolPlus_res + 
+#                                            MedianFamilyIncome_res ,data=x,family="binomial")
+# summary(mod_raw)
+# pR2(mod_raw)
+# 
+# mod_raw <- glm(Depression_mod_above_at_phq ~ MedianFamilyIncome + PercentInPoverty + 
+#                                              PercentNonfamilyHouseholds + PercentWithChildren 
+#                                              ,data=x,family="binomial")
+# summary(mod_raw)
+# pR2(mod_raw)
 
 ###########################################
 #ridge with  CV 
@@ -208,65 +221,13 @@ pR2(mod_raw)
 x_total = merge(Y_bucket,Environment_bucket_trimmed)
 
 #original data
-x_total = merge(Y_bucket,Environment_bucket)
+# x_total = merge(Y_bucket,Environment_bucket)
 
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-set.seed(42)
-lambdas <- 10^seq(3, -2, by = -.1)
-splits <- 100
-ridge_auc <- matrix(NA,splits,3)
-colnames(ridge_auc) <- paste(colnames(y[,c(1:3)]))
-lambds_max <- matrix(nrow = splits,ncol = 3)
+run_ridge(x,y)
 
-#go over every y
-set.seed(42)
-for (j in 1:3){
-  
-  #split the data splits times to 75% training and 25% test
-  for (i in 1:splits) {
-    
-    splitz <- runif(nrow(x))
-    x_train <- x[which(splitz < 0.75),]
-    y_train <- y[which(splitz < 0.75),j]
-    x_test <- x[which(splitz > 0.75),]
-    y_test <- y[which(splitz > 0.75),j]
-    
-    #find best lambda
-    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
-    opt_lambda <- mod$lambda.min
-    lambds_max[i,j] <- opt_lambda
-    mod <- mod$glmnet.fit
-    
-    
-    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="response")
-    
-    pred <- prediction(y_predicted, y_test)
-    ridge_auc[i,j] <- performance(pred, measure = "auc")@y.values[[1]]
-    
-  }
-}
-
-
-#take the best lanbda for the model
-apply(ridge_auc, 2, max, na.rm=TRUE)
-inds = apply(ridge_auc, 2, which.max)
-
-#Lifetime_Suicide_Attempt
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,2], alpha = 0)
-predict(mod, type = "coefficients", s = lambds_max[inds[2],2])
-
-#Current_Suicidal_Ideation
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,1], alpha = 0)
-predict(mod, type = "coefficients", s = lambds_max[inds[1],1])
-
-#Depression_mod_above_at_phq
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,3], alpha = 0)
-predict(mod, type = "coefficients", s = lambds_max[inds[3],3])
 
 

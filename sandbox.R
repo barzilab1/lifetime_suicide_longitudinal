@@ -100,14 +100,38 @@ y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="resp
 pred <- prediction(y_predicted, y_test)
 # calculate cutoff with max sensitivity 
 perf <- performance(pred,"tpr","fpr")
-# plot(perf,colorize=FALSE, col="black") 
-# lines(c(0,1),c(0,1),col = "gray", lty = 4 )
+# plot(perf,colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7)) 
+plot(x=perf@x.values[[1]],y=perf@y.values[[1]],colorize=TRUE)
+lines(c(0,1),c(0,1),col = "gray", lty = 4 )
+
+### plot sensitivity vs specificity
+plot(x = perf@alpha.values[[1]], y=(perf@y.values[[1]]), col="red", type="l", xlab= perf@alpha.name, ylab= perf@y.name ,lwd=2 ) 
+par(new=TRUE)
+plot(x = perf@alpha.values[[1]], y=(1-perf@x.values[[1]]), col="blue", type="l", lwd = 2, xlab="", ylab="") 
+axis(4, at=seq(0,1,0.2))
+mtext("Specificity",side=4, padj=-2, col='blue')
+grid(nx = 15, ny = 10, col = "lightgray", lty = "dotted", lwd = par("lwd"), equilogs = TRUE)
+
+# plot(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values), 
+#      type="l", lwd=2, ylab="Specificity", xlab="Cutoff")
+# par(new=TRUE)
+# plot(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values), 
+#     type="l", lwd=2, col='red', ylab="", xlab="")
+# axis(4, at=seq(0,1,0.2))
+# mtext("Specificity",side=4, padj=-2, col='blue')
+# grid(nx = 15, ny = 15, col = "lightgray", lty = "dotted",
+#      lwd = par("lwd"), equilogs = TRUE)
+
+
+
+
 index.tpr = which(perf@y.values[[1]] == max(perf@y.values[[1]]))
 min.fpr = min(perf@x.values[[1]][index.tpr]) 
-index.fpr = which(perf@x.values[[1]] == min.fpr)[1] #incase there is mire then one index
+index.fpr = which(perf@x.values[[1]] == min.fpr)[1] #incase there is more then one index
 cutoff[i,j] = perf@alpha.values[[1]][index.fpr]
 
-
+#########
+string_name[grepl(paste(string_test, collapse = '|'), string_name)]
 
 ################## laso 
 set.seed(42)  # Set seed for reproducibility
@@ -186,3 +210,13 @@ data.frame(
 
 install.packages("h2o")
 
+
+
+
+####prints
+cat(sprintf("%s \t %i \n", rownames(features), features$Lifetime_Suicide_Attempt))
+
+for(i in 1:3){
+  cat(rownames(features)[i], features$Lifetime_Suicide_Attempt[i], sep="\t")
+  cat("\n")
+}

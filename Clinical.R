@@ -20,10 +20,10 @@ t = Clinical_bucket[,c(115:122)]
 nrow(t[rowSums(is.na(t)) == 8,])
 
 
-#add indicator for age >= 11
-Clinical_bucket$above11 = ifelse(Clinical_bucket$ageAtClinicalAssess1 >= 132,1,0)
-#remove ageAtClinicalAssess1
-Clinical_bucket = subset(Clinical_bucket, select=-c(ageAtClinicalAssess1))
+# #add indicator for age >= 11
+# Clinical_bucket$above11 = ifelse(Clinical_bucket$ageAtClinicalAssess1 >= 132,1,0)
+# #remove ageAtClinicalAssess1
+# Clinical_bucket = subset(Clinical_bucket, select=-c(ageAtClinicalAssess1))
 
 #TODO should we handle outliers? No
 boxplot(Clinical_bucket[,c(114)])
@@ -62,6 +62,19 @@ Substance_bucket = Substance_bucket[,(apply(Substance_bucket, 2, sum, na.rm=TRUE
 
 summary(Substance_bucket)
 chart.Correlation(Substance_bucket[,-1])
+
+
+######edu
+#how many repeat a grade
+sum(t$dem107, na.rm = TRUE) #82
+#how many repeat more than 1 class
+length(which(t$dem107 == 1 & t$dem108 >1)) #8
+#how many repeat only 1 class
+length(which(t$dem107 == 1 & t$dem108 <=1)) #74
+
+#get reasons 
+write.csv(t[which(t$dem107 == 1), ],file = "repeat_a_grade.csv")
+
 
 set.seed(402)
 amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid","above11"), ords = c(2:122))
