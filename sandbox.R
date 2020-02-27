@@ -138,8 +138,10 @@ cutoff[i,j] = perf@alpha.values[[1]][index.fpr]
 #########
 string_name[grepl(paste(string_test, collapse = '|'), string_name)]
 
+
 ##########check if model significant 
 pchisq(Residual Deviance, dgree of freedom, lower.tail = FALSE)
+
 
 ################## laso 
 set.seed(42)  # Set seed for reproducibility

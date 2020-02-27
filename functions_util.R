@@ -46,6 +46,7 @@ opt.cut = function(perf, pred){
   cut.ind = mapply(temp, perf@x.values, perf@y.values, pred@cutoffs)
 }
 
+
 # x: the features bucket
 # y: the outcome variables bucket
 # column_num: the index in y for which to calculate results. the order depends on y. assumption: 

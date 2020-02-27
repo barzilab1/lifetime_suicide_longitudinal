@@ -101,6 +101,7 @@ resids = create_resids(enviro_b)
 x <- data.frame(x,resids)
 
 #regressed regression
+set.seed(42)
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
