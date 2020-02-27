@@ -17,17 +17,34 @@ create_resids = function(bucket) {
 
 get_logistic_results = function (model){
   data.frame(
-      Estimate    =      summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"]  ,
-      EffectSize  = exp( summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"] ),
-      CI_2_5      = exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   1     ] ),
-      CI_97_5     = exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   2     ] ),
-      Pvalue      =      summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Pr(>|z|)"]  
+      Estimate    = round(       summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"] , digits = 3),
+      EffectSize  = round(exp(   summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"]), digits = 3),
+      CI_2_5      = round(exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   1     ]  ), digits = 3),
+      CI_97_5     = round(exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   2     ]  ), digits = 3),
+      Pvalue      = round(       summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Pr(>|z|)"] , digits = 3) 
   )
 }
 
 library(glmnet)
 library(ROCR)
 library(data.table)
+
+#finds the closest point to (0,1) on the ROC curve
+opt.cut = function(perf, pred){
+  
+  temp = function(x, y, p){
+    d = (x - 0)^2 + (y-1)^2
+    ind = which(d == min(d))
+    # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
+    if (length(ind == 2) & ind[1]==1 & ind[2]==length(x)){
+      ind=ind[1]
+    }
+    c(sensitivity = y[[ind]], specificity = 1-x[[ind]], cutoff = p[[ind]])
+  }
+  
+  
+  cut.ind = mapply(temp, perf@x.values, perf@y.values, pred@cutoffs)
+}
 
 # x: the features bucket
 # y: the outcome variables bucket
@@ -102,36 +119,10 @@ run_lasso <- function(x,y, column_num) {
       #calculate sensitivity and specificity
       perf <- performance(pred,"tpr","fpr")
       
-      #if the model didn't select features, the values of sen will be only 0 and 1 
-      #or if the only selected point in the ROC has distance more then 1 (sen will be only 0 or 1) 
-      if(length(perf@x.values[[1]]) < 3 | 
-         length(perf@x.values[[1]]) == 3 & (sqrt((perf@x.values[[1]][2])^2 + (1-perf@y.values[[1]][2])^2)) >= 1){ #length(which(coefs != 0 )) == 1
-        
-        lasso_sen[i,j] = 0 
-        lasso_spe[i,j] = 1
-        next
-      }
-      
-      
-      
-      #calculate the point(s) on ROC closest to (0,1)
-      min_dis = 1
-      sen = numeric()
-      spe = numeric()
-      for (k in 1:length(perf@x.values[[1]])) {
-        dis = sqrt((perf@x.values[[1]][k])^2 + (1-perf@y.values[[1]][k])^2)
-        if (dis < min_dis) {
-          min_dis = dis
-          sen = perf@y.values[[1]][k]
-          spe = 1 - perf@x.values[[1]][k]
-        } else if(dis == min_dis){
-          sen[length(sen)+1] = perf@y.values[[1]][k]
-          spe[length(spe)+1] = 1 - perf@x.values[[1]][k]
-        }
-      }
-      
-      lasso_sen[i,j] = unlist(sen)
-      lasso_spe[i,j] = unlist(spe)
+      #find closest point to (0,1)
+      results = opt.cut(perf, pred)
+      lasso_sen[i,j] = results["sensitivity",1]
+      lasso_spe[i,j] = results["specificity",1]
       
       #the 80% sensitivity 
       dt = data.table(sen = perf@y.values[[1]], spe = 1-perf@x.values[[1]])
@@ -143,6 +134,12 @@ run_lasso <- function(x,y, column_num) {
       }
       lasso_80_sen[i,j] = dt$sen[index.sen]
       lasso_80_sen_spe[i,j] = dt$spe[index.sen]
+      
+      #in case the edges were selected (sen=1, spe=0), replace them as alwayes prefer tests with high spec
+      if(lasso_80_sen[i,j] ==1 & lasso_80_sen_spe[i,j] ==0){
+        lasso_80_sen[i,j] = 0 
+        lasso_80_sen_spe[i,j] = 1
+      }
       
     }
   }
@@ -237,34 +234,11 @@ run_ridge <- function(x,y) {
       #calculate sensitivity and specificity
       perf <- performance(pred,"tpr","fpr")
       
-      #if the model didn't select features, the values of sen will be only 0 and 1 
-      #or if the only selected point in the ROC has distance more then 1 (sen will be only 0 or 1) 
-      if(length(perf@x.values[[1]]) < 3 | 
-         length(perf@x.values[[1]]) == 3 & (sqrt((perf@x.values[[1]][2])^2 + (1-perf@y.values[[1]][2])^2)) >= 1){ 
-        
-        ridge_sen[i,j] = 0 
-        ridge_spe[i,j] = 1
-        next
-      }
+      #find closest point to (0,1)
+      results = opt.cut(perf, pred)
+      ridge_sen[i,j] = results["sensitivity",1]
+      ridge_spe[i,j] = results["specificity",1]
       
-      #calculate the point(s) on ROC closest to (0,1)
-      min_dis = 1
-      sen = numeric()
-      spe = numeric()
-      for (k in 1:length(perf@x.values[[1]])) {
-        dis = sqrt((perf@x.values[[1]][k])^2 + (1-perf@y.values[[1]][k])^2)
-        if (dis < min_dis) {
-          min_dis = dis
-          sen = perf@y.values[[1]][k]
-          spe = 1 - perf@x.values[[1]][k]
-        } else if(dis == min_dis){
-          sen[length(sen)+1] = perf@y.values[[1]][k]
-          spe[length(spe)+1] = 1 - perf@x.values[[1]][k]
-        }
-      }
-      
-      ridge_sen[i,j] = unlist(sen)
-      ridge_spe[i,j] = unlist(spe)
       
       #the 80% sensitivity 
       dt = data.table(sen = perf@y.values[[1]], spe = 1-perf@x.values[[1]])
@@ -276,6 +250,12 @@ run_ridge <- function(x,y) {
       }
       ridge_80_sen[i,j] = dt$sen[index.sen]
       ridge_80_sen_spe[i,j] = dt$spe[index.sen]
+      
+      #in case the edges were selected (sen=1, spe=0), replace them as alwayes prefer tests with high spe
+      if(ridge_80_sen[i,j] ==1 & ridge_80_sen_spe[i,j] == 0){
+        ridge_80_sen[i,j] = 0 
+        ridge_80_sen_spe[i,j] = 1
+      }
       
     }
   }

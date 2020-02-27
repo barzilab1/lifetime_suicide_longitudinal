@@ -4,9 +4,8 @@ library(PerformanceAnalytics)
 summary(Trauma_bucket)
 
 #sexual assault or attack
-table(Trauma_bucket$ptd005) # total: 14 
-table(Trauma_bucket$ptd004) # total: 15
-# one is miising in ptd005
+table(Trauma_bucket$ptd004, Trauma_bucket$ptd005) #no conflicts
+# info is miising in ptd005
 which(Trauma_bucket$ptd004 == 1 & is.na(Trauma_bucket$ptd005) ) # [641]
 
 #create new var (4 or 5) and remove ptd004 & ptd005
@@ -19,12 +18,12 @@ chart.Correlation(Trauma_bucket[,-1])
 boxplot(Trauma_bucket[,-1])
 
 #remove empty rows
-count(Trauma_bucket[rowSums(is.na(Trauma_bucket)) >= 8,]) #5
-Trauma_bucket = Trauma_bucket[rowSums(!is.na(Trauma_bucket)) >= 8,]
+length(which(rowSums(is.na(Trauma_bucket)) >= 8)) #5
+Trauma_bucket = Trauma_bucket[!(rowSums(is.na(Trauma_bucket)) >= 8),]
 
 
 set.seed(24)
-amelia_fit <- amelia(Trauma_bucket,m=1, idvars=c("bblid"), ords = c(2:9))
+amelia_fit <- amelia(Trauma_bucket,m=1, idvars=c("bblid","above11"), ords = c(2:8,10))
 
 summary(amelia_fit)
 
@@ -34,55 +33,62 @@ summary(Trauma_bucket_amelia)
 #no need to scale as all features are binary
 
 #Frequency
-sum(Trauma_bucket$ptd003, na.rm = TRUE)/nrow(Trauma_bucket) #0.026
+sum(Trauma_bucket$ptd003[Trauma_bucket$above11==0], na.rm = TRUE)/nrow(Trauma_bucket) #0.026
 sum(Trauma_bucket$ptd006, na.rm = TRUE)/nrow(Trauma_bucket) #0.015
 
-##########################################################
+# dt=data.table(Trauma_bucket)
+# dt[, lapply(.SD, mean, na.rm=TRUE), by = above11]
+
+Trauma_bucket=Trauma_bucket[,-9]
+Trauma_bucket_amelia=Trauma_bucket_amelia[,-9]
+#######################################
+#Logistic regression 
+
 #amelia data set
-x = merge(Y_bucket[,c(1:4)],Trauma_bucket_amelia)
+x = merge(Y_bucket,Trauma_bucket_amelia)
 trauma_b = Trauma_bucket_amelia[,-1]
 
 #original data set
-x = merge(Y_bucket[,c(1:4)],Trauma_bucket)
-trauma_b = Trauma_bucket[-1]
+x = merge(Y_bucket,Trauma_bucket)
+trauma_b = Trauma_bucket[,-1]
 
-# make object to receive data
-# resids <- matrix(NA,nrow(trauma_b),ncol(trauma_b))
 
-# loop through each column, predict it with all other variables, and take residuals
-# for (j in 1:ncol(trauma_b)) {
-#   mod <- lm(trauma_b[,j]~as.matrix(trauma_b[,-j]),data=trauma_b,na.action=na.exclude)
-#   resids[,j] <- scale(residuals(mod,na.action=na.exclude))
-# }  
-
-# append "res" to column names
-# colnames(resids) <- paste(colnames(trauma_b),"_res",sep="")
-
-# add residual columns to data frame
-# x <- data.frame(x,resids)
-
+### Lifetime_Suicide_Attempt
 set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(trauma_b),data=x,family="binomial")
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+mod_raw <- glm( Lifetime_Suicide_Attempt ~ as.matrix(trauma_b)  ,data=x,family="binomial")
 summary(mod_raw)
-# summary(mod_resid)
+get_logistic_results(mod_raw)[-1,]
+pR2(mod_raw)
 
-set.seed(42)
-mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(trauma_b),data=x,family="binomial")
+# mod_raw <- glm( Lifetime_Suicide_Attempt ~ (ptd001+ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009), data=x[x$above11==1,],family="binomial")
+# summary(mod_raw)
+# get_logistic_results(mod_raw)[-1,]
+# pR2(mod_raw)
+# visreg(mod_raw,"ptd006")
+# visreg(mod_raw,"ptd003")
+# visreg(mod_raw,"ptd0045")
+
+
+
+
+
+
+### Current_Suicidal_Ideation
+# set.seed(42)
+# mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(trauma_b),data=x,family="binomial")
 # mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
-summary(mod_raw)
+# summary(mod_raw)
 # summary(mod_resid)
 
-set.seed(42)
-mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(trauma_b),data=x,family="binomial")
+# set.seed(42)
+# mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(trauma_b),data=x,family="binomial")
 # mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
-summary(mod_raw)
+# summary(mod_raw)
 # summary(mod_resid)
 
 
-###################################  
-
-# CV example
+###########################################
+#Lasso with  CV 
 
 #amelia data set
 x_total = merge(Y_bucket,Trauma_bucket_amelia)
@@ -96,75 +102,32 @@ x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-set.seed(4)
-lambdas <- 10^seq(3, -2, by = -.1)
-splits <- 10
-results <- matrix(NA,splits,3)
-colnames(results) <- paste(colnames(y[,c(1:3)]))
-lambds_max <- matrix(nrow = splits,ncol = 3)
+run_lasso(x,y,2)
 
 
-#go over every y
-for (j in 1:3){
-  
-  #split the data splits times to 75% training and 25% test
-  for (i in 1:splits) {
-    
-    splitz <- runif(nrow(x))
-    x_train <- x[which(splitz < 0.75),]
-    y_train <- y[which(splitz < 0.75),j]
-    x_test <- x[which(splitz > 0.75),]
-    y_test <- y[which(splitz > 0.75),j]
-    
-    
-    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial",lambda=lambdas)
-    opt_lambda <- mod$lambda.min
-    
-    lambds_max[i,j] <- opt_lambda
-    
-    mod <- mod$glmnet.fit
-    
-    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
-    
-    results[i,j] <- (cor(cbind(y_predicted,y_test))[2,1])^2
-  }
-}
-
-apply(results,2, mean,na.rm=TRUE)
-
-
-#take the best lanbda for the model
-apply(results, 2, max, na.rm=TRUE)
-inds = apply(results, 2, which.max)
-
-#Lifetime_Suicide_Attempt
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,2], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[2],2])
-
-#Current_Suicidal_Ideation
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,1], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[1],1])
-
-#Depression_mod_above_at_phq
-set.seed(1)
-mod = glmnet(x=as.matrix(x), y=y[,3], alpha = 1)
-predict(mod, type = "coefficients", s = lambds_max[inds[3],3])
 
 ##########################################################
+
+
+
+
+
+###########################################
+#ridge with  CV 
+
 #amelia data set
-x = merge(Y_bucket[,c(1:4)],Trauma_bucket_amelia)
-trauma_b = Trauma_bucket_amelia[,-1]
+x_total = merge(Y_bucket,Trauma_bucket_amelia)
 
 #original data set
-x = merge(Y_bucket[,c(1:4)],Trauma_bucket)
-trauma_b = Trauma_bucket[-1]
+x_total = merge(Y_bucket,Trauma_bucket)
+#remove rows with NA 
+x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
-set.seed(12)
-mod_raw <- glm(Lifetime_Suicide_Attempt ~ ptd006 + ptd0045,data=x,family="binomial")
-summary(mod_raw)
 
-set.seed(12)
-mod_raw <- glm(Depression_mod_above_at_phq~ptd003 ,data=x,family="binomial")
-summary(mod_raw)
+y = x_total[, c(2:5)]
+x = x_total[,-c(1:5)]
+
+run_ridge(x,y)
+
+
+

@@ -2,33 +2,29 @@ library(Amelia)
 library(PerformanceAnalytics)
 library(parcor)
 library(psych)
+library(qgraph)
 
 
 summary(Clinical_bucket)
 # describe(Clinical_bucket[,-1])
-# View(t[,-c(1,2)])
-
-write.csv(cor(Clinical_bucket, use = "pairwise"),file = "cor_clinic.csv")
-#smry_psych_medication_rtg & scr006 > .9
-
 
 # 3 rows have only the summary variables [medical vars that might be assessed by a different doc]  
-t = Clinical_bucket[,c(1:114)]
-nrow(t[rowSums(is.na(t)) >= 112,])
+t = Clinical_bucket[,c(2:118)]
+nrow(t[rowSums(is.na(t)) == 117,])
 # 4 rows missing all the summary variables [gaf- score between 0-100 (good), 50 bad, relates to the goassess]
-t = Clinical_bucket[,c(115:122)]
+t = Clinical_bucket[,c(120:127)]
 nrow(t[rowSums(is.na(t)) == 8,])
 
+#remove ptd009.x=trauma
+Clinical_bucket = Clinical_bucket[,! names(Clinical_bucket) %in% c("ptd009.x")]
 
-# #add indicator for age >= 11
-# Clinical_bucket$above11 = ifelse(Clinical_bucket$ageAtClinicalAssess1 >= 132,1,0)
-# #remove ageAtClinicalAssess1
-# Clinical_bucket = subset(Clinical_bucket, select=-c(ageAtClinicalAssess1))
+#how many repeat a grade
+sum(Clinical_bucket$dem107, na.rm = TRUE) #82
 
 #TODO should we handle outliers? No
 boxplot(Clinical_bucket[,c(114)])
 
-#########
+############
 #Substance
 summary(Substance_bucket)
 
@@ -63,113 +59,109 @@ Substance_bucket = Substance_bucket[,(apply(Substance_bucket, 2, sum, na.rm=TRUE
 summary(Substance_bucket)
 chart.Correlation(Substance_bucket[,-1])
 
+#merge the tables, take all kids from clinical
+Clinical_bucket = merge(x=Clinical_bucket,y=Substance_bucket,all.x = TRUE)
 
-######edu
-#how many repeat a grade
-sum(t$dem107, na.rm = TRUE) #82
-#how many repeat more than 1 class
-length(which(t$dem107 == 1 & t$dem108 >1)) #8
-#how many repeat only 1 class
-length(which(t$dem107 == 1 & t$dem108 <=1)) #74
+summary(Clinical_bucket)
 
-#get reasons 
-write.csv(t[which(t$dem107 == 1), ],file = "repeat_a_grade.csv")
-
-
-set.seed(402)
-amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid","above11"), ords = c(2:122))
+#get cor including Y
+write.csv(cor_auto(merge(Clinical_bucket,Y_bucket)) ,file = "cor_clinic.csv")
 
 
 
-##########################################################
+set.seed(42)
+amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid"), ords = c(2:132))
+
+summary(amelia_fit)
+
+Clinical_bucket_amelia = amelia_fit$imputations[[1]]
+describe(Clinical_bucket_amelia[,-1])
+
+#scale only the non-binary features 
+# Clinical_bucket_amelia_scaled = Clinical_bucket_amelia
+# Clinical_bucket_amelia_scaled$AvgParentEducation = scale(Clinical_bucket_amelia_scaled$AvgParentEducation) 
+# Clinical_bucket_scaled = Clinical_bucket
+# Clinical_bucket_scaled$AvgParentEducation = scale(Clinical_bucket_scaled$AvgParentEducation) 
+
+
+
+#######################################
+#Logistic regression 
+
 #amelia data set
-x = merge(Y_bucket[,c(1:4)],amelia_fit$imputations[[1]])
-clinic_b = amelia_fit$imputations[[1]][,-1]
+# x = 
+# clinic_b = 
 
 #original data set
-x1 = merge(Y_bucket[,c(1:4)],Clinical_bucket)
+x = merge(Y_bucket,Clinical_bucket)
 clinic_b = Clinical_bucket[,-1]
 
-# make object to receive data
-resids <- matrix(NA,nrow(clinic_b),ncol(clinic_b))
-
-# loop through each column, predict it with all other variables, and take residuals
-for (j in 1:ncol(clinic_b)) {
-  mod <- lm(clinic_b[,j]~as.matrix(clinic_b[,-j]),data=clinic_b,na.action=na.exclude)
-  resids[,j] <- scale(residuals(mod,na.action=na.exclude))
-}  
-
-# append "res" to column names
-colnames(resids) <- paste(colnames(clinic_b),"_res",sep="")
+resids = create_resids(clinic_b)
 
 # add residual columns to data frame
 x <- data.frame(x,resids)
 
-#glm.fit: fitted probabilities numerically 0 or 1 occurred
+### Lifetime_Suicide_Attempt
+set.seed(42)
 mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(clinic_b),data=x,family="binomial")
+summary(mod_raw)
+get_logistic_results(mod_raw)[-1,]
+pR2(mod_raw)
+
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_raw)
 summary(mod_resid)
-
-mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(clinic_b),data=x,family="binomial")
-mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
-summary(mod_raw)
-summary(mod_resid)
-
-mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(clinic_b),data=x,family="binomial")
-mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
-summary(mod_raw)
-summary(mod_resid)
+get_logistic_results(mod_resid)[-1,]
+pR2(mod_resid)
 
 
-###################################  
+######Current_Suicidal_Ideation
+# mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(clinic_b),data=x,family="binomial")
+# mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
+# summary(mod_raw)
+# summary(mod_resid)
+# 
+# mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(clinic_b),data=x,family="binomial")
+# mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
+# summary(mod_raw)
+# summary(mod_resid)
 
-# CV example
+
+###########################################
+#Lasso with  CV 
 
 #amelia data set
-x_total = merge(Y_bucket,amelia_fit$imputations[[1]])
+x_total = merge(Y_bucket,Clinical_bucket_amelia)
 
 #original data set
-# x_total = merge(Y_bucket,Clinical_bucket)
-
-
+x_total = merge(Y_bucket,Clinical_bucket)
 #remove empty tows 
 x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+
+
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-set.seed(42)
-lambdas <- 10^seq(3, -2, by = -.1)
-splits <- 100
-results <- matrix(NA,splits,3)
-colnames(results) <- paste(colnames(y[,c(1:3)]))
+run_lasso(x,y,2)
 
-#go over every y
-for (j in 1:3){
-  
-  #split the data splits times to 75% training and 25% test
-  for (i in 1:splits) {
-    
-    splitz <- runif(nrow(x))
-    x_train <- x[which(splitz < 0.75),]
-    y_train <- y[which(splitz < 0.75),j]
-    x_test <- x[which(splitz > 0.75),]
-    y_test <- y[which(splitz > 0.75),j]
-    
-    
-    mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
-    opt_lambda <- mod$lambda.min
-    
-    mod <- mod$glmnet.fit
-    
-    y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test))
-    
-    results[i,j] <- (cor(cbind(y_predicted,y_test))[2,1])^2
-  }
-}
-apply(results,2, mean)
+###########################################
+#ridge with  CV 
 
-# coef(mod)
-# summary(mod)
-# mod$coefficients
+#amelia data set
+x_total = merge(Y_bucket,Clinical_bucket_amelia)
 
+#original data set
+x_total = merge(Y_bucket,Clinical_bucket)
+#remove empty tows 
+x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+
+
+y = x_total[, c(2:5)]
+x = x_total[,-c(1:5)]
+
+run_ridge(x,y)
+
+
+
+
+
+ 

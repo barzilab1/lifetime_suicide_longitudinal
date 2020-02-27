@@ -77,6 +77,11 @@ length(which(Full_Data$sui002 == 1 & Full_Data$Lifetime_Suicide_Attempt == 2 & F
 table(x[,27:28])
 
 
+#get sum of all columns by binary feature 
+# dt[subset rows, fun to calculate, grouped by]
+dt[, lapply(.SD, sum, na.rm=TRUE), by = above11]
+
+
 #################### confusionMatrix
 library(e1071)
 library(ROCR)
@@ -132,6 +137,9 @@ cutoff[i,j] = perf@alpha.values[[1]][index.fpr]
 
 #########
 string_name[grepl(paste(string_test, collapse = '|'), string_name)]
+
+##########check if model significant 
+pchisq(Residual Deviance, dgree of freedom, lower.tail = FALSE)
 
 ################## laso 
 set.seed(42)  # Set seed for reproducibility

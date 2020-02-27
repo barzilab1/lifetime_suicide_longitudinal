@@ -17,7 +17,7 @@ Family_bucket = subset(Family_bucket, select=-c(medu1,fedu1 ))
 describe(Family_bucket[,-1])
 
 set.seed(24)
-#AvgParentEducation is not ord. should we set bounds? 
+#AvgParentEducation is not ord. should we set bounds? - only if we get odd results
 amelia_fit <- amelia(Family_bucket,m=1, idvars=c("bblid"), ords = c("Parents_Sep_Divorce",
                                                                     "Ran_substance_FH",
                                                                     "Ran_bipolar_or_lithium_FH",
@@ -55,6 +55,7 @@ fam_b = Family_bucket_amelia_scaled[,-1]
 x = merge(Y_bucket,Family_bucket_scaled)
 fam_b = Family_bucket_scaled[,-1]
 
+
 resids = create_resids(fam_b)
 
 # add residual columns to data frame
@@ -76,14 +77,15 @@ pR2(mod_resid)
 # Run with the opposit (multiply with -1) of all negative features 
 
 #amelia data
-temp_data = Family_bucket_amelia
 
 #regular regression
+temp_data = Family_bucket_amelia
 temp_data$Ran_substance_FH = temp_data$Ran_substance_FH * -1
 temp_data$Ran_substance_FH = temp_data$Ran_substance_FH + 1
 temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
 
 #regressed regression
+temp_data = Family_bucket_amelia
 temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
 
 
@@ -163,8 +165,10 @@ fam_b = Family_bucket_amelia_scaled[,c("AvgParentEducation", "Ran_substance_FH",
                                 "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
 
 #original data set
-# x = merge(Y_bucket[,c(1:4)],Family_bucket)
-# fam_b = Family_bucket[,-1]
+x = merge(Y_bucket,Family_bucket_scaled[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
+                                                           "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")])
+fam_b = Family_bucket_scaled[,c("AvgParentEducation", "Ran_substance_FH", 
+                                "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
 
 resids = create_resids(fam_b)
 
@@ -190,15 +194,17 @@ pR2(mod_resid)
 # Run with the opposit (multiply with -1) of all negative features 
 
 #amelia data
-temp_data = Family_bucket_amelia[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
-                                           "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
 
 #regular regression
+temp_data = Family_bucket_amelia[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
+                                    "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
 temp_data$Ran_substance_FH = temp_data$Ran_substance_FH * -1
 temp_data$Ran_substance_FH = temp_data$Ran_substance_FH + 1
 temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
 
 #regressed regression
+temp_data = Family_bucket_amelia[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
+                                    "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
 temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
 
 
@@ -208,6 +214,7 @@ summary(temp_data)
 
 x = merge(Y_bucket,temp_data)
 fam_b = temp_data[,-1]
+
 
 resids = create_resids(fam_b)
 
@@ -237,10 +244,10 @@ pR2(mod_resid)
 x_total = merge(Y_bucket,Family_bucket_amelia)
 
 #original data set
-# x_total = merge(Y_bucket,Family_bucket)
+x_total = merge(Y_bucket,Family_bucket)
 # summary(x_total)
 # remove rows with NA
-# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
 
 y = x_total[, c(2:5)]
