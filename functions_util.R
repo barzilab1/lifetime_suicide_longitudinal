@@ -28,6 +28,7 @@ get_logistic_results = function (model){
 library(glmnet)
 library(ROCR)
 library(data.table)
+library(caTools)
 
 #finds the closest point to (0,1) on the ROC curve
 opt.cut = function(perf, pred){
@@ -56,7 +57,7 @@ opt.cut = function(perf, pred){
 run_lasso <- function(x,y, column_num) {
   
   lambdas <- 10^seq(3, -2, by = -.1)
-  splits <- 100
+  splits <- 10000
   
   lasso_auc <- matrix(NA,splits,3)
   colnames(lasso_auc) <- paste(colnames(y[,c(1:3)]))
@@ -88,11 +89,11 @@ run_lasso <- function(x,y, column_num) {
     #split the data splits times to 75% training and 25% test
     for (i in 1:splits) {
       
-      splitz <- runif(nrow(x))
-      x_train <- x[which(splitz < 0.75),]
-      y_train <- y[which(splitz < 0.75),j]
-      x_test <- x[which(splitz > 0.75),]
-      y_test <- y[which(splitz > 0.75),j]
+      splitz = sample.split(y[[j]], .75)
+      x_train <- x[splitz,]
+      y_train <- y[splitz,j]
+      x_test <- x[!splitz,]
+      y_test <- y[!splitz,j]
       
       #find best lambda
       mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial",lambda=lambdas)
@@ -157,13 +158,13 @@ run_lasso <- function(x,y, column_num) {
   cat("\nFeatures\n")
   features = features[order(features[,column_num], decreasing = TRUE),]
   print(features)
-  plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num])
+  plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num], pch = 19)
   axis(1, at=1:nrow(features), labels=rownames(features))
   
   # avg. number of selected features. 
   # if there is no clear "knee" in the features graph, use the avg. selected features
   cat("\n Avg. selected features")
-  cat("\n all 100 models: " , number_of_features[1,column_num]/100, sep = "\t")  
+  cat("\n all 100 models: " , number_of_features[1,column_num]/splits, sep = "\t")  
   cat("\n only models that selected features: " , number_of_features[1,column_num]/number_of_features[2,column_num], sep = "\t")  
   cat("\n")
   
@@ -189,7 +190,7 @@ run_lasso <- function(x,y, column_num) {
 run_ridge <- function(x,y) {
   set.seed(42)
   lambdas <- 10^seq(3, -2, by = -.1)
-  splits <- 100
+  splits <- 10000
   
   ridge_auc <- matrix(NA,splits,3)
   colnames(ridge_auc) <- paste(colnames(y[,c(1:3)]))
@@ -213,11 +214,11 @@ run_ridge <- function(x,y) {
     #split the data splits times to 75% training and 25% test
     for (i in 1:splits) {
       
-      splitz <- runif(nrow(x))
-      x_train <- x[which(splitz < 0.75),]
-      y_train <- y[which(splitz < 0.75),j]
-      x_test <- x[which(splitz > 0.75),]
-      y_test <- y[which(splitz > 0.75),j]
+      splitz = sample.split(y[[j]], .75)
+      x_train <- x[splitz,]
+      y_train <- y[splitz,j]
+      x_test <- x[!splitz,]
+      y_test <- y[!splitz,j]
       
       #find best lambda
       mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)

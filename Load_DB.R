@@ -1,5 +1,4 @@
 library("readr")
-# library("stringer")
 
 #read the CSV. 
 PHQ_Data = read_csv("PHQ9_file_for_Elina_with_PNC_FH.csv")
@@ -73,10 +72,10 @@ Demographics_bucket = merge(Demographics_bucket, Edu_info_combined[,c("bblid","t
 ###Clinical_bucket
 Clinical_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_clinical)
 Clinical_bucket = merge(Sips_Extras, Clinical_bucket)
-#age above 11- check if child or parent did the assesment 
-# Clinical_bucket = merge(Clinical_bucket, PNC_Core_Data[,c("bblid","above11")])
 #add if the child skipped a class 
 Clinical_bucket = merge(Clinical_bucket, Edu_info_combined[,c(1,3)])
+#age above 11- check if child or parent did the assesment 
+Clinical_bucket = merge(Clinical_bucket, PNC_Core_Data[,c("bblid","above11")])
 Substance_bucket = merge(Y_bucket[,c("bblid")], GO1_Substance_Use[,c(1,76:89)])
 
 Cognitive_raw_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive_ALTERNATIVE)

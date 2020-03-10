@@ -5,7 +5,7 @@ library(psych)
 library(qgraph)
 
 
-summary(Clinical_bucket)
+summary(Clinical_bucket[,-1])
 # describe(Clinical_bucket[,-1])
 
 # 3 rows have only the summary variables [medical vars that might be assessed by a different doc]  
@@ -21,8 +21,8 @@ Clinical_bucket = Clinical_bucket[,! names(Clinical_bucket) %in% c("ptd009.x")]
 #how many repeat a grade
 sum(Clinical_bucket$dem107, na.rm = TRUE) #82
 
-#TODO should we handle outliers? No
-boxplot(Clinical_bucket[,c(114)])
+#TODO should we handle outliers for gaf? No
+boxplot(Clinical_bucket[,c(118)])
 
 ############
 #Substance
@@ -70,23 +70,25 @@ write.csv(cor_auto(merge(Clinical_bucket,Y_bucket)) ,file = "cor_clinic.csv")
 
 
 set.seed(42)
-amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid"), ords = c(2:132))
+amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid", "above11"), ords = c(2:127,129:133))
 
 summary(amelia_fit)
 
 Clinical_bucket_amelia = amelia_fit$imputations[[1]]
 describe(Clinical_bucket_amelia[,-1])
+summary(Clinical_bucket_amelia[,-1])
 
 #scale only the non-binary features 
 # Clinical_bucket_amelia_scaled = Clinical_bucket_amelia
-# Clinical_bucket_amelia_scaled$AvgParentEducation = scale(Clinical_bucket_amelia_scaled$AvgParentEducation) 
+# Clinical_bucket_amelia_scaled = scale(Clinical_bucket_amelia_scaled) 
 # Clinical_bucket_scaled = Clinical_bucket
-# Clinical_bucket_scaled$AvgParentEducation = scale(Clinical_bucket_scaled$AvgParentEducation) 
+# Clinical_bucket_scaled = scale(Clinical_bucket_scaled) 
 
 
 
 #######################################
 #Logistic regression 
+#######################################
 
 #amelia data set
 # x = 
@@ -127,7 +129,8 @@ pR2(mod_resid)
 
 
 ###########################################
-#Lasso with  CV 
+#Lasso and ridge with CV
+##########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Clinical_bucket_amelia)
@@ -137,28 +140,18 @@ x_total = merge(Y_bucket,Clinical_bucket)
 #remove empty tows 
 x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
+
+
+x_total = x_total[,! names(x_total) %in% c("above11")]
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
+run_ridge(x,y)
 
 ###########################################
-#ridge with  CV 
 
-#amelia data set
-x_total = merge(Y_bucket,Clinical_bucket_amelia)
-
-#original data set
-x_total = merge(Y_bucket,Clinical_bucket)
-#remove empty tows 
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_ridge(x,y)
 
 
 

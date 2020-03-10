@@ -18,7 +18,7 @@ The outcomes of features:
 * 109679 = Sum PHQ-9 score
 * Depression_mod_above_at_phq = Depression in PHQ (0=no, 1=yes)
 
-#### Bucket:
+#### Buckets:
 
 1. Demographics
 2. Clinical
@@ -30,7 +30,8 @@ The outcomes of features:
 
 #### How to Run:
 1. Run "Load_DB.R" to load all data from csv files
-2. Each bucket can be run as separate script after "load_DB.R" was run  
+2. Run Function_util.R 
+3. Each bucket can be run as separate script after "load_DB.R" was run except for the combined bucket  
   
 ---
 #### Open Questions:

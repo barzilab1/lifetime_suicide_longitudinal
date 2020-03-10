@@ -33,16 +33,24 @@ summary(Trauma_bucket_amelia)
 #no need to scale as all features are binary
 
 #Frequency
-sum(Trauma_bucket$ptd003[Trauma_bucket$above11==0], na.rm = TRUE)/nrow(Trauma_bucket) #0.026
-sum(Trauma_bucket$ptd006, na.rm = TRUE)/nrow(Trauma_bucket) #0.015
+sum(Trauma_bucket$ptd001, na.rm = TRUE)/nrow(Y_bucket) #0.041
+sum(Trauma_bucket$ptd002, na.rm = TRUE)/nrow(Y_bucket) #0.079
+sum(Trauma_bucket$ptd003, na.rm = TRUE)/nrow(Y_bucket) #0.026
+sum(Trauma_bucket$ptd0045, na.rm = TRUE)/nrow(Y_bucket) #0.016
+sum(Trauma_bucket$ptd006, na.rm = TRUE)/nrow(Y_bucket) #0.015
+sum(Trauma_bucket$ptd007, na.rm = TRUE)/nrow(Y_bucket) #0.059
+sum(Trauma_bucket$ptd008, na.rm = TRUE)/nrow(Y_bucket) #0.101
+sum(Trauma_bucket$ptd009, na.rm = TRUE)/nrow(Y_bucket) #0.118
 
 # dt=data.table(Trauma_bucket)
 # dt[, lapply(.SD, mean, na.rm=TRUE), by = above11]
 
+#remove above11 for now
 Trauma_bucket=Trauma_bucket[,-9]
 Trauma_bucket_amelia=Trauma_bucket_amelia[,-9]
 #######################################
 #Logistic regression 
+#######################################
 
 #amelia data set
 x = merge(Y_bucket,Trauma_bucket_amelia)
@@ -88,7 +96,8 @@ pR2(mod_raw)
 
 
 ###########################################
-#Lasso with  CV 
+#Lasso and ridge with CV
+###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Trauma_bucket_amelia)
@@ -103,31 +112,61 @@ y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
-
-
-
-##########################################################
-
-
-
-
-
-###########################################
-#ridge with  CV 
-
-#amelia data set
-x_total = merge(Y_bucket,Trauma_bucket_amelia)
-
-#original data set
-x_total = merge(Y_bucket,Trauma_bucket)
-#remove rows with NA 
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
 run_ridge(x,y)
 
 
 
+###########################################
+#Check Trauma weird results 
+###########################################
+#make sure Demographics bucket is ready 
+
+#1. calculate AUC for Demographics 
+x = merge(Y_bucket,Demographics_bucket)
+demo_b = Demographics_bucket_scaled[,-1]
+
+resids = create_resids(demo_b)
+x <- data.frame(x,resids)
+
+set.seed(42)
+splitz = sample.split(x$Lifetime_Suicide_Attempt, .75)
+x_train <- x[splitz,]
+demo_b_train = demo_b[splitz,]
+x_test <- x[!splitz,]
+
+mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black,data=x_train,family="binomial")
+summary(mod_raw)
+             
+y_predicted <- predict(mod_raw, x_test, type="response")
+pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
+
+#calculate AUC
+performance(pred, measure = "auc")@y.values[[1]] #0.5462538
+
+
+#resid
+mod_resid <- glm(Lifetime_Suicide_Attempt~goassessPhqDurMonths_res + sex_res + ethnicity_res + tml007_res +
+                  age_res + race2_White_res + race2_Black_res ,data=x,family="binomial")
+summary(mod_resid)
+
+y_predicted <- predict(mod_raw, x_test, type="response")
+pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
+
+#calculate AUC
+performance(pred, measure = "auc")@y.values[[1]] #0.5462538
+
+
+#2. add trauma
+
+x_train = merge(x_train,Trauma_bucket_amelia)
+x_test = merge(x_test,Trauma_bucket_amelia)
+
+mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black+ 
+                 ptd001 + ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009,data=x_train,family="binomial")
+summary(mod_raw)
+
+y_predicted <- predict(mod_raw, x_test, type="response")
+pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
+
+#calculate AUC
+performance(pred, measure = "auc")@y.values[[1]] #0.5007645

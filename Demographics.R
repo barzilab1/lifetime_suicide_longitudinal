@@ -6,12 +6,6 @@ summary(Demographics_bucket[,-1])
 describe(Demographics_bucket[,-1])
 
 
-#add the phq age
-Demographics_bucket$ageAtPHQAssess2 = Demographics_bucket$ageAtClinicalAssess1 + Demographics_bucket$goassessPhqDurMonths
-#remove goassessPhqDurMonths
-Demographics_bucket = subset(Demographics_bucket, select=-c(goassessPhqDurMonths))
-
-
 #missing cnb age will be the goassess1 age
 Demographics_bucket$ageAtCnb1[is.na(Demographics_bucket$ageAtCnb1)] = 
   Demographics_bucket$ageAtClinicalAssess1[is.na(Demographics_bucket$ageAtCnb1)]
@@ -60,9 +54,12 @@ sum(Demographics_bucket$sex)/nrow(Demographics_bucket) #0.476
 sum(Demographics_bucket$ethnicity)/nrow(Demographics_bucket) #0.937
 sum(Demographics_bucket$race2_White)/nrow(Demographics_bucket) #0.400
 sum(Demographics_bucket$race2_Black)/nrow(Demographics_bucket) #0.487
+sum(Demographics_bucket$ethnicity)/nrow(Demographics_bucket) #0.937
 
 #######################################
 #Logistic regression 
+#######################################
+
 x = merge(Y_bucket,Demographics_bucket_scaled)
 demo_b = Demographics_bucket_scaled[,-1]
 
@@ -126,7 +123,8 @@ pR2(mod_resid)
 
 
 ###########################################
-#Lasso with  CV
+#Lasso and ridge with CV 
+###########################################
 
 #original data
 x_total = merge(Y_bucket,Demographics_bucket)
@@ -135,9 +133,11 @@ y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
+run_ridge(x,y)
 
 ##########################################
 #features selection according to the lasso
+##########################################
 
 ####Lifetime_Suicide_Attempt 
 ### the "knee" in the graph equal to the avg. 
@@ -190,19 +190,6 @@ mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
-
-
-###########################################
-#ridge with  CV 
-
-#original data
-x_total = merge(Y_bucket,Demographics_bucket)
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_ridge(x,y)
 
 
 

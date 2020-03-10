@@ -28,6 +28,7 @@ summary(amelia_fit)
 
 Family_bucket_amelia = amelia_fit$imputations[[1]]
 describe(Family_bucket_amelia[,-1])
+summary(Family_bucket_amelia)
 
 #scale only the non-binary features (AvgParentEducation)
 Family_bucket_amelia_scaled = Family_bucket_amelia
@@ -46,6 +47,7 @@ sum(Family_bucket$Parents_Sep_Divorce, na.rm = TRUE)/nrow(Family_bucket) #0.167
 
 #######################################
 #Logistic regression 
+#######################################
 
 #amelia data set
 x = merge(Y_bucket,Family_bucket_amelia_scaled)
@@ -133,7 +135,8 @@ pR2(mod_resid)
 
 
 ###########################################
-#Lasso with  CV
+#Lasso and ridge with CV 
+###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Family_bucket_amelia)
@@ -149,6 +152,7 @@ y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
+run_ridge(x,y)
 
 
 
@@ -236,23 +240,5 @@ summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
-
-###########################################
-#ridge with  CV 
-
-#amelia data set
-x_total = merge(Y_bucket,Family_bucket_amelia)
-
-#original data set
-x_total = merge(Y_bucket,Family_bucket)
-# summary(x_total)
-# remove rows with NA
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_ridge(x,y)
 
 

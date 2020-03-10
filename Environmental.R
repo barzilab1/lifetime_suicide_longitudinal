@@ -37,6 +37,7 @@ summary(Environment_bucket_trimmed_scaled)
 
 #######################################
 #Logistic regression 
+#######################################
 
 #trimmed data
 x = merge(Y_bucket,Environment_bucket_trimmed_scaled)
@@ -108,24 +109,9 @@ get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
 
-### Current_Suicidal_Ideation
-# set.seed(42)
-# mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(enviro_b,data=x,family="binomial")
-# mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-# pR2(mod_resid)
-
-# set.seed(42)
-# mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(enviro_b,data=x,family="binomial")
-# mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-# pR2(mod_resid)
-
-
 ###########################################
-#Lasso with  CV 
+#Lasso and ridge with  CV 
+###########################################
 
 #trimmed data
 x_total = merge(Y_bucket,Environment_bucket_trimmed)
@@ -138,10 +124,12 @@ y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
+run_ridge(x,y)
 
 
 ##########################################
 #features selection according to the lasso
+##########################################
 
 ####Lifetime_Suicide_Attempt 
 ### as there is no clear "knee" in the graph, select according to the avg. 
@@ -198,37 +186,5 @@ mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
-
-
-
-
-
-####Current_Suicidal_Ideation 
-# mod_raw <- glm(Current_Suicidal_Ideation ~ PercentEnglishSpeakers_res + PercentHighSchoolPlus_res + 
-#                                            MedianFamilyIncome_res ,data=x,family="binomial")
-# summary(mod_raw)
-# pR2(mod_raw)
-# 
-# mod_raw <- glm(Depression_mod_above_at_phq ~ MedianFamilyIncome + PercentInPoverty + 
-#                                              PercentNonfamilyHouseholds + PercentWithChildren 
-#                                              ,data=x,family="binomial")
-# summary(mod_raw)
-# pR2(mod_raw)
-
-###########################################
-#ridge with  CV 
-
-#trimmed data
-x_total = merge(Y_bucket,Environment_bucket_trimmed)
-
-#original data
-# x_total = merge(Y_bucket,Environment_bucket)
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_ridge(x,y)
-
 
 

@@ -230,3 +230,51 @@ for(i in 1:3){
   cat(rownames(features)[i], features$Lifetime_Suicide_Attempt[i], sep="\t")
   cat("\n")
 }
+
+
+
+
+
+#all features selecgted by lasso 
+combined_bucket_lasso_selected = Reduce(function(x, y) merge(x, y, by="bblid", all.x=TRUE), 
+                                        list(Environment_bucket_trimmed[,c(1:6,9:12,14:15)],
+                                             Demographics_bucket[,c(1:3,6:8)],
+                                             Family_bucket[,-2],
+                                             Trauma_bucket[,c(1,4,5,9)],
+                                             Clinical_bucket[,c("bblid","sui002","man004","add016","add022",
+                                                                "sip028","sip038","phb004","SIP030",
+                                                                "sip011","psy001","add012","scr007",
+                                                                "add021","sip027","sip033","man003",
+                                                                "man005","sip014","gad002","cdd004",
+                                                                "man006","ocd002","sip006","cdd008",
+                                                                "ocd001","phb006","SIP035","sip007",
+                                                                "sip008","psy071","add011","sui001",
+                                                                "man001","phb002","smry_psych_bedwet_rtg",
+                                                                "psy050","cdd005","cdd003","cdd007",
+                                                                "man007","scr001","agr008","agr003",
+                                                                "smry_psych_learning_prob_rtg",
+                                                                "smry_psych_speech_prob_rtg",
+                                                                "dem107","subs_smry_sub_otc",
+                                                                "SIP043","sip010","odd002","odd003",
+                                                                "add020","odd001","cdd001","dep002",
+                                                                "dep006","ocd005","ocd006","ocd004",
+                                                                "ocd019","cdd002","sip039","ocd018",
+                                                                "agr002","agr001","soc002","phb005",
+                                                                "ocd014","smry_psych_medication_rtg",
+                                                                "subs_smry_sub_inh","subs_smry_sub_ster")],
+                                             Cognitive_bucket[,c(1:10,13,15,17:21,24:26)]))
+
+set.seed(42)
+amelia_fit <- amelia(combined_bucket_lasso_selected ,m=1,  idvars=c("bblid"), 
+                     ords = c("sex","race2_White",
+                              "Ran_substance_FH","Parents_Sep_Divorce","Ran_Sui_attempt_or_death_FH",
+                              "ptd006","ptd0045",
+                              "sui002","man004","add016","add022","sip028","sip038","phb004","SIP030","sip011","psy001","add012"
+                     ))
+
+summary(amelia_fit)
+
+combined_bucket_lasso_selected_amelia = amelia_fit$imputations[[1]]
+summary(combined_bucket_lasso_selected_amelia[,-1])
+
+

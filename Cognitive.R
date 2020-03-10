@@ -78,8 +78,14 @@ Cognitive_bucket_combined_scaled = Cognitive_bucket_combined
 Cognitive_bucket_combined_scaled[,c(24:48)] = scale(Cognitive_bucket_combined_scaled[,c(24:48)])
 
 
+########cog without raw
+#remove empty rows from origin cog
+summary(Cognitive_bucket)
+Cognitive_bucket = Cognitive_bucket[rowSums(is.na(Cognitive_bucket)) < 26,]
+
 #######################################
 #Logistic regression 
+#######################################
 
 #amelia data set
 x = merge(Y_bucket,Cognitive_bucket_amelia_scaled)
@@ -97,12 +103,6 @@ x <- data.frame(x,resids)
 
 
 ### Lifetime_Suicide_Attempt
-# set.seed(42)
-# mod_raw <- glm(Lifetime_Suicide_Attempt ~ as.matrix(cogni_b) ,data=x,family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-
 
 mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
 summary(mod_resid)
@@ -125,7 +125,8 @@ pR2(mod_resid)
 
 
 ###########################################
-#Lasso with  CV 
+#Lasso and ridge with CV
+###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Cognitive_bucket_amelia)
@@ -135,28 +136,12 @@ x_total = merge(Y_bucket,Cognitive_bucket_combined)
 #remove empty rows 
 x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
+#data without raw
+x_total = merge(Y_bucket,Cognitive_bucket)
+
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
-
-###########################################
-#ridge with  CV 
-
-#amelia data set
-x_total = merge(Y_bucket,Cognitive_bucket_amelia)
-
-#original data set
-x_total = merge(Y_bucket,Cognitive_bucket_combined)
-#remove rows with NA 
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
 run_ridge(x,y)
-
-
-
