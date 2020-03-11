@@ -79,22 +79,6 @@ pR2(mod_raw)
 
 
 
-
-
-### Current_Suicidal_Ideation
-# set.seed(42)
-# mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(trauma_b),data=x,family="binomial")
-# mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-
-# set.seed(42)
-# mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(trauma_b),data=x,family="binomial")
-# mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-
-
 ###########################################
 #Lasso and ridge with CV
 ###########################################
@@ -123,50 +107,51 @@ run_ridge(x,y)
 
 #1. calculate AUC for Demographics 
 x = merge(Y_bucket,Demographics_bucket)
-demo_b = Demographics_bucket_scaled[,-1]
+demo_b = Demographics_bucket[,-1]
 
 resids = create_resids(demo_b)
 x <- data.frame(x,resids)
 
 set.seed(42)
-splitz = sample.split(x$Lifetime_Suicide_Attempt, .75)
-x_train <- x[splitz,]
-demo_b_train = demo_b[splitz,]
-x_test <- x[!splitz,]
-
-mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black,data=x_train,family="binomial")
+mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black,data=x,family="binomial")
 summary(mod_raw)
-             
-y_predicted <- predict(mod_raw, x_test, type="response")
-pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
-
+y_predicted <- predict(mod_raw, type="response")
+pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
 #calculate AUC
-performance(pred, measure = "auc")@y.values[[1]] #0.5462538
+performance(pred, measure = "auc")@y.values[[1]] #0.6518222
 
 
 #resid
 mod_resid <- glm(Lifetime_Suicide_Attempt~goassessPhqDurMonths_res + sex_res + ethnicity_res + tml007_res +
                   age_res + race2_White_res + race2_Black_res ,data=x,family="binomial")
 summary(mod_resid)
-
-y_predicted <- predict(mod_raw, x_test, type="response")
-pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
-
+y_predicted <- predict(mod_raw, type="response")
+pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
 #calculate AUC
-performance(pred, measure = "auc")@y.values[[1]] #0.5462538
+performance(pred, measure = "auc")@y.values[[1]] #0.6518222
 
 
 #2. add trauma
-
-x_train = merge(x_train,Trauma_bucket_amelia)
-x_test = merge(x_test,Trauma_bucket_amelia)
+x = merge(x,Trauma_bucket_amelia)
 
 mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black+ 
-                 ptd001 + ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009,data=x_train,family="binomial")
+                 ptd001 + ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009,data=x,family="binomial")
 summary(mod_raw)
 
-y_predicted <- predict(mod_raw, x_test, type="response")
-pred <- prediction(y_predicted, x_test$Lifetime_Suicide_Attempt)
+y_predicted <- predict(mod_raw, type="response")
+pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
 
 #calculate AUC
-performance(pred, measure = "auc")@y.values[[1]] #0.5007645
+performance(pred, measure = "auc")@y.values[[1]] #0.6839159
+
+
+mod_resid <- glm(Lifetime_Suicide_Attempt~goassessPhqDurMonths_res + sex_res + ethnicity_res + tml007_res +
+                   age_res + race2_White_res + race2_Black_res+ptd001 + ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009
+                 ,data=x,family="binomial")
+summary(mod_resid)
+y_predicted <- predict(mod_raw, type="response")
+pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
+#calculate AUC
+performance(pred, measure = "auc")@y.values[[1]] #0.6839159
+
+
