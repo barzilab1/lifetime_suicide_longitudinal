@@ -286,3 +286,44 @@ run_ridge <- function(x,y) {
   print(apply(ridge_80_sen_spe, 2, mean, na.rm=TRUE))
 }
 
+
+library(stir)
+run_stir <- function(x,y,column_num) {
+  splits <- 100090
+  
+  features <- matrix(0,nrow = ncol(x), ncol = 3)
+  rownames(features) <- paste(colnames(x))
+  colnames(features) <- paste(colnames(y[,c(1:3)]))
+  
+  set.seed(24)
+  
+  results <- NA
+  #go over every y
+  set.seed(2)
+  for (j in 1:3){
+    
+    #split the data splits times to 75% training and 25% test
+    for (i in 1:splits) {
+      
+      splitz = sample.split(y[[j]], .75)
+      x_train <- x[splitz,]
+      y_train <- y[splitz,j]
+      
+      
+      RF.method = "multisurf"
+      metric <- "manhattan"
+      neighbors <- find.neighbors(x_train, y_train, k = 0, method = RF.method)
+      res <- stir(x_train, neighbors, k = 0, metric = metric, method = RF.method)$STIR_T
+      res <- rownames(res[res$t.pval < 0.05,])
+      
+      features[res,j] = features[res,j] +1
+    }
+  }
+  
+  cat("\nSelected Features According to Relieff\n")
+  features = features[order(features[,column_num], decreasing = TRUE),]
+  print(features)
+  plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num], pch = 19)
+  axis(1, at=1:nrow(features), labels=rownames(features))
+  
+}

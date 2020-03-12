@@ -187,4 +187,52 @@ summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
+##########################################
+# relieff (according to P_value)
+##########################################
 
+x_total = merge(Y_bucket,Environment_bucket_trimmed)
+
+y = x_total[, c(2:5)]
+x = x_total[,-c(1:5)]
+
+run_stir(x,y,2)
+
+splits <- 100
+
+features <- matrix(0,nrow = ncol(x), ncol = 3)
+rownames(features) <- paste(colnames(x))
+colnames(features) <- paste(colnames(y[,c(1:3)]))
+
+set.seed(2)
+
+results <- NA
+#go over every y
+set.seed(2)
+# for (j in 1:3){
+  j=2
+  #split the data splits times to 75% training and 25% test
+  for (i in 1:splits) {
+  
+    splitz = sample.split(y[[j]], .75)
+    x_train <- x[splitz,]
+    y_train <- y[splitz,j]
+    x_test <- x[!splitz,]
+    y_test <- y[!splitz,j]
+    
+    
+    RF.method = "multisurf"
+    metric <- "manhattan"
+    neighbors <- find.neighbors(x_train, y_train, k = 0, method = RF.method)
+    res <- stir(x_train, neighbors, k = 0, metric = metric, method = RF.method)$STIR_T
+    res <- rownames(res[res$t.pval < 0.05,])
+    
+    features[res,j] = features[res,j] +1
+  }
+# }
+
+cat("\nSelected Features according to relieff\n")
+features = features[order(features[,column_num], decreasing = TRUE),]
+print(features)
+plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num], pch = 19)
+axis(1, at=1:nrow(features), labels=rownames(features))
