@@ -5,7 +5,7 @@ The primary analyses that we will do will involve the lifetime suicide attempt.
 Overall there are:
 
 * 922 participants 
-* 49 lifetime suicide attempts
+* 49 lifetime suicide attempts (5.3%)
 * 33 current suicidal ideation  
 * 95 current depression
 

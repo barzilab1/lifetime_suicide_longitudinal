@@ -98,6 +98,11 @@ x = x_total[,-c(1:5)]
 run_lasso(x,y,2)
 run_ridge(x,y)
 
+##########################################
+# relieff (according to P_value)
+##########################################
+run_stir(x,y,2)
+
 
 
 ###########################################
@@ -168,7 +173,7 @@ for(name in names_trauma){
   y_predicted <- predict(mod_raw, type="response")
   pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
   
-  auc = round(performance(pred, measure = "auc")@y.values[[1]], digits = 3) #0.658
+  auc = round(performance(pred, measure = "auc")@y.values[[1]], digits = 3) 
   cor = round(polychoric(data.frame(x[,name],x$Lifetime_Suicide_Attempt))$rho[2],digits = 5)
   
   cat("\n AUC Demographics + ", name, ": ", auc, " polychoric(Lifetime_Suicide_Attempt,",name,")$rho: " ,cor)

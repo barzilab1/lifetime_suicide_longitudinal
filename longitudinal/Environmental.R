@@ -8,8 +8,6 @@ summary(Environment_bucket[,-1])
 Environment_bucket = Environment_bucket[,! names(Environment_bucket) %in% c("neighborhoodCrime")]
 
 # MedianFamilyIncome <0 , 556 620 => whill be removed as outliers
-# Environment_bucket = Environment_bucket[Environment_bucket$MedianFamilyIncome >= 0,]
-
 describe(Environment_bucket[,-1])
 chart.Correlation(Environment_bucket[,-1])
 boxplot(Environment_bucket[,-1])
@@ -67,52 +65,16 @@ get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
 
-####when running only with MedianFamilyIncome also negative 
+####when running only with MedianFamilyIncome - also negative 
 # x= merge(Y_bucket,Environment_bucket)
 # mod_raw <- glm(Lifetime_Suicide_Attempt~MedianFamilyIncome,data=x,family="binomial")
 # summary(mod_raw)
 
 
-# Run with the opposit (multiply with -1) of all negative features 
-
-#trimmed data
-temp_data = Environment_bucket_trimmed
-
-#origianl data
-temp_data = Environment_bucket
-
-
-#regressed regression
-temp_data$PWhite = temp_data$PWhite * -1
-temp_data$PercentMarried = temp_data$PercentMarried * -1
-temp_data$MedianFamilyIncome = temp_data$MedianFamilyIncome * -1
-temp_data$PercentHighSchoolPlus = temp_data$PercentHighSchoolPlus * -1
-temp_data$MED_AGE = temp_data$MED_AGE * -1
-summary(temp_data)
-
-#scale 
-temp_data[,-1] = scale(temp_data[,-1])
-
-x = merge(Y_bucket,temp_data)
-enviro_b = temp_data[,-1]
-
-resids = create_resids(enviro_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-#regressed regression
-set.seed(42)
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
 
 ###########################################
-#Lasso and ridge with  CV 
+#Lasso and ridge with CV 
 ###########################################
-
 #trimmed data
 x_total = merge(Y_bucket,Environment_bucket_trimmed)
 
@@ -125,12 +87,14 @@ x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
 run_ridge(x,y)
-
+##########################################
+# relieff (according to P_value)
+##########################################
+run_stir(x,y,2)
 
 ##########################################
 #features selection according to the lasso
 ##########################################
-
 ####Lifetime_Suicide_Attempt 
 ### as there is no clear "knee" in the graph, select according to the avg. 
 
@@ -157,82 +121,3 @@ summary(mod_resid)
 get_logistic_results(mod_resid)[-1,]
 pR2(mod_resid)
 
-
-# Run with the opposit (multiply with -1) of all negative features 
-
-#trimmed data
-temp_data = Environment_bucket_trimmed[,c("bblid","MedianFamilyIncome","PWhite", "PercentHighSchoolPlus")]
-
-#origianl data
-# temp_data = Environment_bucket[,c("bblid")]
-
-#regressed regression
-temp_data[,-1] = temp_data[,-1] *-1
-
-
-#scale 
-temp_data[,-1] = scale(temp_data[,-1])
-
-x = merge(Y_bucket,temp_data)
-enviro_b = temp_data[,-1]
-
-resids = create_resids(enviro_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-#regressed regression
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-##########################################
-# relieff (according to P_value)
-##########################################
-
-x_total = merge(Y_bucket,Environment_bucket_trimmed)
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_stir(x,y,2)
-
-splits <- 100
-
-features <- matrix(0,nrow = ncol(x), ncol = 3)
-rownames(features) <- paste(colnames(x))
-colnames(features) <- paste(colnames(y[,c(1:3)]))
-
-set.seed(2)
-
-results <- NA
-#go over every y
-set.seed(2)
-# for (j in 1:3){
-  j=2
-  #split the data splits times to 75% training and 25% test
-  for (i in 1:splits) {
-  
-    splitz = sample.split(y[[j]], .75)
-    x_train <- x[splitz,]
-    y_train <- y[splitz,j]
-    x_test <- x[!splitz,]
-    y_test <- y[!splitz,j]
-    
-    
-    RF.method = "multisurf"
-    metric <- "manhattan"
-    neighbors <- find.neighbors(x_train, y_train, k = 0, method = RF.method)
-    res <- stir(x_train, neighbors, k = 0, metric = metric, method = RF.method)$STIR_T
-    res <- rownames(res[res$t.pval < 0.05,])
-    
-    features[res,j] = features[res,j] +1
-  }
-# }
-
-cat("\nSelected Features according to relieff\n")
-features = features[order(features[,column_num], decreasing = TRUE),]
-print(features)
-plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num], pch = 19)
-axis(1, at=1:nrow(features), labels=rownames(features))
