@@ -96,11 +96,14 @@ for (i in 1:splits) {
 
 }
 
+
+
+
 #find corelations between all type of features. include the label variable as well  
 library(qgraph)
 cor_auto(x[,-1])
-
 # diffrent types of correlations based on the feature type: biserial, tetrachoric, polychoric, polyserial
+
 # package with ML: caret
 
 library(leaps)

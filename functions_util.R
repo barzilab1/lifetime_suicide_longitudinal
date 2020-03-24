@@ -56,7 +56,6 @@ opt.cut = function(perf, pred){
 # 3-Depression_mod_above_at_phq
 run_lasso <- function(x,y, column_num) {
   
-  lambdas <- 10^seq(3, -2, by = -.1)
   splits <- 10000
   
   lasso_auc <- matrix(NA,splits,3)
@@ -74,6 +73,9 @@ run_lasso <- function(x,y, column_num) {
   
   lasso_spe = matrix(NA,splits,3)
   colnames(lasso_spe) <- paste(colnames(y[,c(1:3)]))
+  
+  lasso_acc = matrix(NA,splits,3)
+  colnames(lasso_acc) <- paste(colnames(y[,c(1:3)]))
   
   lasso_80_sen = matrix(NA,splits,3)
   colnames(lasso_80_sen) <- paste(colnames(y[,c(1:3)]))
@@ -96,7 +98,7 @@ run_lasso <- function(x,y, column_num) {
       y_test <- y[!splitz,j]
       
       #find best lambda
-      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial",lambda=lambdas)
+      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial")
       opt_lambda <- mod$lambda.min
       
       #get model
@@ -125,6 +127,12 @@ run_lasso <- function(x,y, column_num) {
       results = opt.cut(perf, pred)
       lasso_sen[i,j] = results["sensitivity",1]
       lasso_spe[i,j] = results["specificity",1]
+      
+      #calculate acc
+      acc = performance(pred, measure = "acc")
+      ind = which(unlist(acc@x.values) == results["cutoff",1])
+      lasso_acc[i,j] = acc@y.values[[1]][ind] 
+      
       
       #the 80% sensitivity 
       dt = data.table(sen = perf@y.values[[1]], spe = 1-perf@x.values[[1]])
@@ -162,19 +170,21 @@ run_lasso <- function(x,y, column_num) {
   axis(1, at=1:nrow(features), labels=rownames(features))
   
   # avg. number of selected features. 
-  # if there is no clear "knee" in the features graph, use the avg. selected features
   cat("\n Avg. selected features")
   cat("\n all 100 models: " , number_of_features[1,column_num]/splits, sep = "\t")  
   cat("\n only models that selected features: " , number_of_features[1,column_num]/number_of_features[2,column_num], sep = "\t")  
   cat("\n")
   
-  #get sen and spe closest to (0,1)
+  #get sen, spe and acc closest to (0,1)
   cat("\n Closest point on the ROC to (0,1) ")
   cat("\n Sensitivity \n")
   print(apply(lasso_sen, 2, mean, na.rm=TRUE))
   cat("\n Specificity \n")
   print(apply(lasso_spe, 2, mean, na.rm=TRUE))
+  cat("\n Accurecy \n")
+  print(apply(lasso_acc, 2, mean, na.rm=TRUE))
   cat("\n")
+  
   
   #get sen 80%
   cat("\n Closest point to Sensitivity = 80% ")
@@ -188,8 +198,7 @@ run_lasso <- function(x,y, column_num) {
 #x: the features bucket
 #y: the predicted values bucket
 run_ridge <- function(x,y) {
-  set.seed(42)
-  lambdas <- 10^seq(3, -2, by = -.1)
+  
   splits <- 10000
   
   ridge_auc <- matrix(NA,splits,3)
@@ -201,14 +210,17 @@ run_ridge <- function(x,y) {
   ridge_spe = matrix(NA,splits,3)
   colnames(ridge_spe) <- paste(colnames(y[,c(1:3)]))
   
+  ridge_acc = matrix(NA,splits,3)
+  colnames(ridge_acc) <- paste(colnames(y[,c(1:3)]))
+  
   ridge_80_sen = matrix(NA,splits,3)
   colnames(ridge_80_sen) <- paste(colnames(y[,c(1:3)]))
   
   ridge_80_sen_spe = matrix(NA,splits,3)
   colnames(ridge_80_sen_spe) <- paste(colnames(y[,c(1:3)]))
   
-  
   #go over every y
+  set.seed(42)
   for (j in 1:3){
     
     #split the data splits times to 75% training and 25% test
@@ -221,7 +233,7 @@ run_ridge <- function(x,y) {
       y_test <- y[!splitz,j]
       
       #find best lambda
-      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial",lambda=lambdas)
+      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial")
       opt_lambda <- mod$lambda.min
       
       #get model
@@ -240,6 +252,11 @@ run_ridge <- function(x,y) {
       results = opt.cut(perf, pred)
       ridge_sen[i,j] = results["sensitivity",1]
       ridge_spe[i,j] = results["specificity",1]
+      
+      #calculate acc
+      acc = performance(pred, measure = "acc")
+      ind = which(unlist(acc@x.values) == results["cutoff",1])
+      ridge_acc[i,j] = acc@y.values[[1]][ind] 
       
       
       #the 80% sensitivity 
@@ -270,12 +287,14 @@ run_ridge <- function(x,y) {
   print(apply(ridge_auc, 2, mean, na.rm=TRUE))
   cat("\n")
   
-  #get sen and spe closest to (0,1)
+  #get sen, spe and acc closest to (0,1)
   cat("\n Closest point on the ROC to (0,1) ")
   cat("\n Sensitivity \n")
   print(apply(ridge_sen, 2, mean, na.rm=TRUE))
   cat("\n Specificity \n")
   print(apply(ridge_spe, 2, mean, na.rm=TRUE))
+  cat("\n Accurecy \n")
+  print(apply(ridge_acc, 2, mean, na.rm=TRUE))
   cat("\n")
   
   #get sen 80%
@@ -287,27 +306,40 @@ run_ridge <- function(x,y) {
 }
 
 
-library(stir)
+##########################################
+# relieff (according to P_value)
+##########################################
+# library(stir)
+library(doParallel)
+
+
+# x: the features bucket
+# y: the outcome variables bucket
+# column_num: the index in y for which to calculate results. the order depends on y. assumption: 
+# 1-Current_Suicidal_Ideation
+# 2-Lifetime_Suicide_Attempt
+# 3-Depression_mod_above_at_phq
 run_stir <- function(x,y,column_num) {
-  splits <- 100090
   
-  features <- matrix(0,nrow = ncol(x), ncol = 3)
+  splits <- 10000
+  
+  # create a parallel socket clusters
+  cl <- makeCluster(20)
+  registerDoParallel(cl)
+  
+  features <- matrix(0,nrow = ncol(x), ncol = 1)
   rownames(features) <- paste(colnames(x))
-  colnames(features) <- paste(colnames(y[,c(1:3)]))
-  
-  set.seed(24)
   
   results <- NA
-  #go over every y
-  set.seed(2)
-  for (j in 1:3){
     
-    #split the data splits times to 75% training and 25% test
-    for (i in 1:splits) {
+  results_list = foreach(i = seq(splits), .packages=c('stir','caTools') ) %dopar% {
+    
+      set.seed(i) # to keep iterations consistent
       
-      splitz = sample.split(y[[j]], .75)
+      #split the data splits times to 75% training and 25% test
+      splitz = sample.split(y[[column_num]], .75)
       x_train <- x[splitz,]
-      y_train <- y[splitz,j]
+      y_train <- y[splitz,column_num]
       
       
       RF.method = "multisurf"
@@ -316,14 +348,28 @@ run_stir <- function(x,y,column_num) {
       res <- stir(x_train, neighbors, k = 0, metric = metric, method = RF.method)$STIR_T
       res <- rownames(res[res$t.pval < 0.05,])
       
-      features[res,j] = features[res,j] +1
     }
-  }
+  
+  stopCluster(cl)
+  
+  #get selected features
+  res = table(unlist(results_list))
+  features[names(res),] =  data.frame(res,row.names = names(res))$Freq
+  #how many were selected 
+  tot_number = sum(sapply(results_list, length))
+  #add one to the number of times more than 1 feature was selected 
+  tot_selected_model = sum(sapply(results_list, function(x){ length(x)>0}))
+  
   
   cat("\nSelected Features According to Relieff\n")
-  features = features[order(features[,column_num], decreasing = TRUE),]
+  features = features[order(features[,1], decreasing = TRUE),,drop=FALSE]
   print(features)
-  plot(features[,column_num] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(features)[column_num], pch = 19)
+  plot(features[,1] ,xlab="" ,ylab="Frequency", xaxt="n" , main=colnames(y)[column_num], pch = 19)
   axis(1, at=1:nrow(features), labels=rownames(features))
+  
+  cat("\n Avg. selected features")
+  cat("\n all 10k models: " , tot_number/splits, sep = "\t")  
+  cat("\n only models that selected features: " , tot_number/tot_selected_model, sep = "\t")  
+  cat("\n")
   
 }

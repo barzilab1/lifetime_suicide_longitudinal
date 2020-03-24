@@ -11,8 +11,7 @@ Demographics_bucket$ageAtCnb1[is.na(Demographics_bucket$ageAtCnb1)] =
   Demographics_bucket$ageAtClinicalAssess1[is.na(Demographics_bucket$ageAtCnb1)]
 
 #get mean of age at goassess1 and cnb ( we don't need both)
-Demographics_bucket$age = rowMeans(data.frame(Demographics_bucket$ageAtClinicalAssess1, 
-                                              Demographics_bucket$ageAtCnb1))
+Demographics_bucket$age = rowMeans(Demographics_bucket[,c("ageAtClinicalAssess1", "ageAtCnb1")])
 
 #remove the other age features
 Demographics_bucket = subset(Demographics_bucket, select=-c(ageAtClinicalAssess1,ageAtCnb1))

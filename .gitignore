@@ -36,7 +36,7 @@ PHQ9_file_for_Elina_with_PNC_FH.csv
 SepDivorce.csv
 n9462_substance_go1_052215.csv
 cor_clinic.xlsx
-pics
+longitudinal/pic
 cor_cog.xlsx
 GO1_grade_repeats.csv
 n14508_GOASSESS_Timeline_noncorrected_20131021_redcap_pid251.csv
@@ -47,3 +47,4 @@ cor_cog.csv
 cor.csv
 names.csv
 cor_clinic.csv
+PNC_diagnoses.csv

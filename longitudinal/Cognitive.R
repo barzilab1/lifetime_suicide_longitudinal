@@ -111,19 +111,6 @@ pR2(mod_resid)
 
 
 
-
-#Current_Suicidal_Ideation
-# mod_raw <- glm(Current_Suicidal_Ideation~as.matrix(cogni_b),data=x,family="binomial")
-# mod_resid <- glm(Current_Suicidal_Ideation~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-# 
-# mod_raw <- glm(Depression_mod_above_at_phq~as.matrix(cogni_b),data=x,family="binomial")
-# mod_resid <- glm(Depression_mod_above_at_phq~resids,data=x,family="binomial")
-# summary(mod_raw)
-# summary(mod_resid)
-
-
 ###########################################
 #Lasso and ridge with CV
 ###########################################
@@ -145,3 +132,11 @@ x = x_total[,-c(1:5)]
 
 run_lasso(x,y,2)
 run_ridge(x,y)
+##########################################
+# relieff (according to P_value)
+##########################################
+run_stir(x,y,2)
+
+
+
+
