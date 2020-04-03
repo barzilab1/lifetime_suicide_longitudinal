@@ -45,14 +45,13 @@ sum(Trauma_bucket$ptd009, na.rm = TRUE)/nrow(Y_bucket) #0.118
 # dt=data.table(Trauma_bucket)
 # dt[, lapply(.SD, mean, na.rm=TRUE), by = above11]
 
-#remove above11 for now
-Trauma_bucket=Trauma_bucket[,-9]
-Trauma_bucket_amelia=Trauma_bucket_amelia[,-9]
+
 #######################################
 #Logistic regression 
 #######################################
 
 #amelia data set
+#TODO remove above 11
 x = merge(Y_bucket,Trauma_bucket_amelia)
 trauma_b = Trauma_bucket_amelia[,-1]
 
@@ -82,10 +81,10 @@ pR2(mod_raw)
 ###########################################
 
 #amelia data set
-x_total = merge(Y_bucket,Trauma_bucket_amelia)
+x_total = merge(Y_bucket,Trauma_bucket_amelia[,-9])
 
 #original data set
-x_total = merge(Y_bucket,Trauma_bucket)
+x_total = merge(Y_bucket,Trauma_bucket[,-9])
 #remove rows with NA 
 x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 

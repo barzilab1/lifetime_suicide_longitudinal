@@ -37,9 +37,15 @@ opt.cut = function(perf, pred){
     d = (x - 0)^2 + (y-1)^2
     ind = which(d == min(d))
     # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
-    if (length(ind == 2) & ind[1]==1 & ind[2]==length(x)){
+    if (length(ind) == 2 & ind[1]==1 & ind[2]==length(x)){
+      ind=ind[1]
+    }else if(length(ind) > 1 & ind[length(ind)] != length(x)){
+      #there are a few points with the same distance from (0,1), but it is not (0,0) (1,1)
+      ind = ind[length(ind)]
+    }else if(length(ind) > 1){
       ind=ind[1]
     }
+    
     c(sensitivity = y[[ind]], specificity = 1-x[[ind]], cutoff = p[[ind]])
   }
   
