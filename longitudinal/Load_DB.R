@@ -12,7 +12,7 @@ GOASSESS_Timeline = read_csv("n14508_GOASSESS_Timeline_noncorrected_20131021_red
 GO1_grade_repeats = read_csv("GO1_grade_repeats.csv")
 SepDivorce = read_csv("SepDivorce.csv")
 Sips_Extras = read_csv("sips_extras.csv")
-PNC_diagnoses = read_csv("PNC_diagnoses.csv")
+# PNC_diagnoses = read_csv("PNC_diagnoses.csv")
 
 #################
 ####build buckets 

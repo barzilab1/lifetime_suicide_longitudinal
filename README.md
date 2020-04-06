@@ -2,6 +2,7 @@
 
 The primary analyses that we will do will involve the lifetime suicide attempt.
 
+longitudinal:
 Overall there are:
 
 * 922 participants 
@@ -17,6 +18,11 @@ The outcomes of features:
 * 109678 = Lifetime suicide attempt (0=no, 1=yes)
 * 109679 = Sum PHQ-9 score
 * Depression_mod_above_at_phq = Depression in PHQ (0=no, 1=yes)
+
+cross-sectional:
+* 322 participate in both 
+* 6674 participate only in cross and have data
+* 660 suicide attempts (10%)
 
 #### Buckets:
 
