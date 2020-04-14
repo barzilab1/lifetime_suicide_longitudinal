@@ -4,7 +4,7 @@ library(parcor)
 
 
 summary(Family_bucket[,-1])
-chart.Correlation(Family_bucket[,-1])
+# chart.Correlation(Family_bucket[,-1])
 
 boxplot(Family_bucket[,-1])
 # boxplot(winsor(Family_bucket[,-1],trim=0.005))
@@ -49,33 +49,34 @@ sum(Family_bucket$Parents_Sep_Divorce, na.rm = TRUE)/nrow(Family_bucket) #0.167
 #Logistic regression 
 #######################################
 
-#amelia data set
-x = merge(Y_bucket,Family_bucket_amelia_scaled)
-fam_b = Family_bucket_amelia_scaled[,-1]
+# #amelia data set
+# x = merge(Y_bucket,Family_bucket_amelia_scaled)
+# fam_b = Family_bucket_amelia_scaled[,-1]
+# 
+# #original data set
+# x = merge(Y_bucket,Family_bucket_scaled)
+# fam_b = Family_bucket_scaled[,-1]
+# 
+# 
+# resids = create_resids(fam_b)
+# 
+# # add residual columns to data frame
+# x <- data.frame(x,resids)
+# 
+# ### Lifetime_Suicide_Attempt
+# set.seed(42)
+# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(fam_b),data=x,family="binomial")
+# summary(mod_raw)
+# get_logistic_results(mod_raw)[-1,]
+# pR2(mod_raw)
+# 
+# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+# summary(mod_resid)
+# get_logistic_results(mod_resid)[-1,]
+# pR2(mod_resid)
 
-#original data set
-x = merge(Y_bucket,Family_bucket_scaled)
-fam_b = Family_bucket_scaled[,-1]
-
-
-resids = create_resids(fam_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-### Lifetime_Suicide_Attempt
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(fam_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-
+cat("\n\n###########################################")
+print("Family")
 ###########################################
 #Lasso and ridge with CV 
 ###########################################
@@ -83,11 +84,11 @@ pR2(mod_resid)
 #amelia data set
 x_total = merge(Y_bucket,Family_bucket_amelia)
 
-#original data set
-x_total = merge(Y_bucket,Family_bucket)
-summary(x_total)
-# remove rows with NA
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+# #original data set
+# x_total = merge(Y_bucket,Family_bucket)
+# summary(x_total)
+# # remove rows with NA
+# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
 
 y = x_total[, c(2:5)]
@@ -102,88 +103,6 @@ run_ridge(x,y)
 run_stir(x,y,2)
 
 ##########################################
-#features selection according to the lasso
+# Random Forest 
 ##########################################
-####Lifetime_Suicide_Attempt 
-### as there is no clear "knee" in the graph, select according to the avg. 
-
-#amelia data set
-x = merge(Y_bucket,Family_bucket_amelia_scaled[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
-                                           "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")])
-fam_b = Family_bucket_amelia_scaled[,c("AvgParentEducation", "Ran_substance_FH", 
-                                "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
-
-#original data set
-x = merge(Y_bucket,Family_bucket_scaled[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
-                                                           "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")])
-fam_b = Family_bucket_scaled[,c("AvgParentEducation", "Ran_substance_FH", 
-                                "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
-
-resids = create_resids(fam_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-#regular regression
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(fam_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-
-#regressed regression
-set.seed(42)
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-##########################
-# Run with the opposit (multiply with -1) of all negative features 
-
-#amelia data
-
-#regular regression
-temp_data = Family_bucket_amelia[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
-                                    "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
-temp_data$Ran_substance_FH = temp_data$Ran_substance_FH * -1
-temp_data$Ran_substance_FH = temp_data$Ran_substance_FH + 1
-temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
-
-#regressed regression
-temp_data = Family_bucket_amelia[,c("bblid","AvgParentEducation", "Ran_substance_FH", 
-                                    "Parents_Sep_Divorce", "Ran_Sui_attempt_or_death_FH")]
-temp_data$AvgParentEducation = temp_data$AvgParentEducation * -1
-
-
-#scale 
-temp_data$AvgParentEducation = scale(temp_data$AvgParentEducation)
-summary(temp_data)
-
-x = merge(Y_bucket,temp_data)
-fam_b = temp_data[,-1]
-
-
-resids = create_resids(fam_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-#regular regression
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(fam_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-
-#regressed regression
-set.seed(42)
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-
-
+run_tree_RF(x,y,2)

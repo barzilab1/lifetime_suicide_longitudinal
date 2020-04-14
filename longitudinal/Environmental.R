@@ -1,6 +1,3 @@
-library(PerformanceAnalytics)
-library(psych)
-library(pscl)
 
 summary(Environment_bucket[,-1])
 
@@ -9,7 +6,7 @@ Environment_bucket = Environment_bucket[,! names(Environment_bucket) %in% c("nei
 
 # MedianFamilyIncome <0 , 556 620 => whill be removed as outliers
 describe(Environment_bucket[,-1])
-chart.Correlation(Environment_bucket[,-1])
+# chart.Correlation(Environment_bucket[,-1])
 boxplot(Environment_bucket[,-1])
 
 #shift outliers values
@@ -20,7 +17,7 @@ colnames(Environment_bucket_trimmed)[1] <- "bblid"
 describe(Environment_bucket_trimmed[,-1])
 summary(Environment_bucket_trimmed[,-1])
 boxplot(Environment_bucket_trimmed[,-1])
-chart.Correlation(Environment_bucket_trimmed[,-1])
+# chart.Correlation(Environment_bucket_trimmed[,-1])
 
 
 #scale 
@@ -38,31 +35,31 @@ summary(Environment_bucket_trimmed_scaled)
 #######################################
 
 #trimmed data
-x = merge(Y_bucket,Environment_bucket_trimmed_scaled)
-enviro_b = Environment_bucket_trimmed_scaled[,-1]
-
-#original data
-x = merge(Y_bucket,Environment_bucket_scaled)
-enviro_b = Environment_bucket_scaled[,-1]
-
-
-resids = create_resids(enviro_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-
-### Lifetime_Suicide_Attempt
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(enviro_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
+# x = merge(Y_bucket,Environment_bucket_trimmed_scaled)
+# enviro_b = Environment_bucket_trimmed_scaled[,-1]
+# 
+# #original data
+# x = merge(Y_bucket,Environment_bucket_scaled)
+# enviro_b = Environment_bucket_scaled[,-1]
+# 
+# 
+# resids = create_resids(enviro_b)
+# 
+# # add residual columns to data frame
+# x <- data.frame(x,resids)
+# 
+# 
+# ### Lifetime_Suicide_Attempt
+# set.seed(42)
+# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(enviro_b),data=x,family="binomial")
+# summary(mod_raw)
+# get_logistic_results(mod_raw)[-1,]
+# pR2(mod_raw)
+# 
+# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+# summary(mod_resid)
+# get_logistic_results(mod_resid)[-1,]
+# pR2(mod_resid)
 
 
 ####when running only with MedianFamilyIncome - also negative 
@@ -71,7 +68,8 @@ pR2(mod_resid)
 # summary(mod_raw)
 
 
-
+cat("\n\n###########################################")
+print("Environment")
 ###########################################
 #Lasso and ridge with CV 
 ###########################################
@@ -93,31 +91,7 @@ run_ridge(x,y)
 run_stir(x,y,2)
 
 ##########################################
-#features selection according to the lasso
+# Random Forest 
 ##########################################
-####Lifetime_Suicide_Attempt 
-### as there is no clear "knee" in the graph, select according to the avg. 
-
-#trimmed data
-x = merge(Y_bucket,Environment_bucket_trimmed[,c("bblid","MedianFamilyIncome","PWhite", 
-                                                 "PercentHighSchoolPlus")])
-enviro_b = Environment_bucket_trimmed[,c("MedianFamilyIncome","PWhite", "PercentHighSchoolPlus")]
-
-
-#original data
-# x = merge(Y_bucket,Environment_bucket_scaled[,c("bblid")])
-# enviro_b = Environment_bucket_scaled[,c()]
-
-resids = create_resids(enviro_b)
-
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(enviro_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
+run_tree_RF(x,y,2)
 

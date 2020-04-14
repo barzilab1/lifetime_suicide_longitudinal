@@ -1,5 +1,3 @@
-library(PerformanceAnalytics)
-library(Amelia)
 
 
 Cognitive_bucket_combined = merge(Cognitive_bucket, Cognitive_raw_bucket[,c(1,42,46:59,85,90:101)])
@@ -39,7 +37,7 @@ Cognitive_bucket_combined = Cognitive_bucket_combined[,-c(33:37,39,41,43,44,46,4
 
 boxplot(Cognitive_bucket_combined[,-1])
 
-write.csv(cor(Cognitive_bucket_combined[,-1], use = "pairwise"),file = "cor_cog.csv")
+# write.csv(cor(Cognitive_bucket_combined[,-1], use = "pairwise"),file = "cor_cog.csv")
 #er40_f_rtcr_log & eid_s_ar_z < -.81
 #er40_m_rtcr_log & eid_s_ar_z < -.80
 #er40_m_cr       & eid_ar_z   > .83
@@ -94,30 +92,31 @@ Cognitive_bucket = Cognitive_bucket[,! names(Cognitive_bucket) %in% c("battery_v
 #Logistic regression 
 #######################################
 
-#amelia data set
-x = merge(Y_bucket,Cognitive_bucket_amelia_scaled)
-cogni_b = Cognitive_bucket_amelia_scaled[,-1]
+# #amelia data set
+# x = merge(Y_bucket,Cognitive_bucket_amelia_scaled)
+# cogni_b = Cognitive_bucket_amelia_scaled[,-1]
+# 
+# #original data set
+# x = merge(Y_bucket,Cognitive_bucket_combined_scaled)
+# cogni_b = Cognitive_bucket_combined_scaled[,-1]
+# 
+# 
+# resids = create_resids(cogni_b)
+# 
+# # add residual columns to data frame
+# x <- data.frame(x,resids)
+# 
+# 
+# ### Lifetime_Suicide_Attempt
+# 
+# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+# summary(mod_resid)
+# get_logistic_results(mod_resid)[-1,]
+# pR2(mod_resid)
 
-#original data set
-x = merge(Y_bucket,Cognitive_bucket_combined_scaled)
-cogni_b = Cognitive_bucket_combined_scaled[,-1]
 
-
-resids = create_resids(cogni_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-
-### Lifetime_Suicide_Attempt
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-
-
+cat("\n\n###########################################")
+print("Cognitive")
 ###########################################
 #Lasso and ridge with CV
 ###########################################
@@ -144,6 +143,9 @@ run_ridge(x,y)
 ##########################################
 run_stir(x,y,2)
 
-
+##########################################
+# Random Forest 
+##########################################
+run_tree_RF(x,y,2)
 
 

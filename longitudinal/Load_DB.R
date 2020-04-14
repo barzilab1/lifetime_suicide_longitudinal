@@ -1,17 +1,17 @@
 library("readr")
 
 #read the CSV. 
-PHQ_Data = read_csv("PHQ9_file_for_Elina_with_PNC_FH.csv")
-PNC_Core_Data_clinical = read_csv("PNC_Core_Data_clinical.csv")
-PNC_Core_Data_cognitive = read_csv("PNC_Core_Data_cognitive.csv")
-PNC_Core_Data_cognitive_ALTERNATIVE = read_csv("PNC_Core_Data_cognitive_ALTERNATIVE.csv")
-PNC_Core_Data_demographics = read_csv("PNC_Core_Data_demographics.csv")
-PNC_Core_Data_environment = read_csv("PNC_Core_Data_environment.csv")
-GO1_Substance_Use = read_csv("n9462_substance_go1_052215.csv")
-GOASSESS_Timeline = read_csv("n14508_GOASSESS_Timeline_noncorrected_20131021_redcap_pid251.csv")
-GO1_grade_repeats = read_csv("GO1_grade_repeats.csv")
-SepDivorce = read_csv("SepDivorce.csv")
-Sips_Extras = read_csv("sips_extras.csv")
+PHQ_Data = read_csv("Data/PHQ9_file_for_Elina_with_PNC_FH.csv")
+PNC_Core_Data_clinical = read_csv("Data/PNC_Core_Data_clinical.csv")
+PNC_Core_Data_cognitive = read_csv("Data/PNC_Core_Data_cognitive.csv")
+PNC_Core_Data_cognitive_ALTERNATIVE = read_csv("Data/PNC_Core_Data_cognitive_ALTERNATIVE.csv")
+PNC_Core_Data_demographics = read_csv("Data/PNC_Core_Data_demographics.csv")
+PNC_Core_Data_environment = read_csv("Data/PNC_Core_Data_environment.csv")
+GO1_Substance_Use = read_csv("Data/n9462_substance_go1_052215.csv")
+GOASSESS_Timeline = read_csv("Data/n14508_GOASSESS_Timeline_noncorrected_20131021_redcap_pid251.csv")
+GO1_grade_repeats = read_csv("Data/GO1_grade_repeats.csv")
+SepDivorce = read_csv("Data/SepDivorce.csv")
+Sips_Extras = read_csv("Data/sips_extras.csv")
 # PNC_diagnoses = read_csv("PNC_diagnoses.csv")
 
 #################
@@ -87,16 +87,16 @@ Cognitive_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive)
 
 
 #check na% - need to check with cognetive combined!
-Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
-                                                               PNC_Core_Data_environment, 
-                                                               PNC_Core_Data_cognitive, 
-                                                               PNC_Core_Data_cognitive_ALTERNATIVE,
-                                                               PNC_Core_Data_clinical,
-                                                               PNC_Core_Data_demographics,
-                                                               Substance_bucket,
-                                                               SepDivorce))
-
-number_NA = sum(is.na(Full_Data))
-number_NA_col = colSums(is.na(Full_Data))
-data_dim = dim(Full_Data) 
-number_NA/(data_dim[1]*data_dim[2]) #0.11
+# Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
+#                                                                PNC_Core_Data_environment, 
+#                                                                PNC_Core_Data_cognitive, 
+#                                                                PNC_Core_Data_cognitive_ALTERNATIVE,
+#                                                                PNC_Core_Data_clinical,
+#                                                                PNC_Core_Data_demographics,
+#                                                                Substance_bucket,
+#                                                                SepDivorce))
+# 
+# number_NA = sum(is.na(Full_Data))
+# number_NA_col = colSums(is.na(Full_Data))
+# data_dim = dim(Full_Data) 
+# number_NA/(data_dim[1]*data_dim[2]) #0.11

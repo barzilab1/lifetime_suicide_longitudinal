@@ -1,9 +1,3 @@
-library(Amelia)
-library(PerformanceAnalytics)
-library(parcor)
-library(psych)
-library(qgraph)
-
 
 summary(Clinical_bucket[,-1])
 # describe(Clinical_bucket[,-1])
@@ -57,7 +51,6 @@ Substance_bucket = Substance_bucket[,(apply(Substance_bucket, 2, sum, na.rm=TRUE
 
 
 summary(Substance_bucket)
-chart.Correlation(Substance_bucket[,-1])
 
 #merge the tables, take all kids from clinical
 Clinical_bucket = merge(x=Clinical_bucket,y=Substance_bucket,all.x = TRUE)
@@ -65,7 +58,7 @@ Clinical_bucket = merge(x=Clinical_bucket,y=Substance_bucket,all.x = TRUE)
 summary(Clinical_bucket)
 
 #get cor including Y
-write.csv(cor_auto(merge(Clinical_bucket,Y_bucket)) ,file = "cor_clinic.csv")
+# write.csv(cor_auto(merge(Clinical_bucket,Y_bucket)) ,file = "cor_clinic.csv")
 
 
 
@@ -94,28 +87,31 @@ summary(Clinical_bucket_amelia[,-1])
 # x = 
 # clinic_b = 
 
-#original data set
-x = merge(Y_bucket,Clinical_bucket)
-clinic_b = Clinical_bucket[,-1]
+# #original data set
+# x = merge(Y_bucket,Clinical_bucket)
+# clinic_b = Clinical_bucket[,-1]
+# 
+# resids = create_resids(clinic_b)
+# 
+# # add residual columns to data frame
+# x <- data.frame(x,resids)
+# 
+# ### Lifetime_Suicide_Attempt
+# set.seed(42)
+# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(clinic_b),data=x,family="binomial")
+# summary(mod_raw)
+# get_logistic_results(mod_raw)[-1,]
+# pR2(mod_raw)
+# 
+# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
+# summary(mod_resid)
+# get_logistic_results(mod_resid)[-1,]
+# pR2(mod_resid)
 
-resids = create_resids(clinic_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-### Lifetime_Suicide_Attempt
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(clinic_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
 
 
+cat("\n\n###########################################")
+print("Clinical")
 ###########################################
 #Lasso and ridge with CV
 ##########################################
@@ -123,11 +119,10 @@ pR2(mod_resid)
 #amelia data set
 x_total = merge(Y_bucket,Clinical_bucket_amelia)
 
-#original data set
-x_total = merge(Y_bucket,Clinical_bucket)
-#remove empty tows 
-x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
+# #original data set
+# x_total = merge(Y_bucket,Clinical_bucket)
+# #remove empty tows 
+# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
 
 x_total = x_total[,! names(x_total) %in% c("above11")]
@@ -143,7 +138,10 @@ run_ridge(x,y)
 ##########################################
 run_stir(x,y,2)
 
-
+##########################################
+# Random Forest 
+##########################################
+run_tree_RF(x,y,2)
 
 
 
