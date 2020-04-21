@@ -29,6 +29,7 @@ library(glmnet)
 library(ROCR)
 library(data.table)
 library(caTools)
+library(doParallel)
 
 #finds the closest point to (0,1) on the ROC curve
 opt.cut = function(perf, pred){
@@ -54,6 +55,12 @@ opt.cut = function(perf, pred){
 }
 
 
+splits <- 10000
+# Calculate the number of cores
+number_cores <- detectCores()
+cat("no_cores " , number_cores) 
+
+
 # x: the features bucket
 # y: the outcome variables bucket
 # column_num: the index in y for which to calculate results. the order depends on y. assumption: 
@@ -61,8 +68,6 @@ opt.cut = function(perf, pred){
 # 2-Lifetime_Suicide_Attempt
 # 3-Depression_mod_above_at_phq
 run_lasso <- function(x,y, column_num) {
-  
-  splits <- 10000
   
   lasso_auc <- matrix(NA,splits,3)
   colnames(lasso_auc) <- paste(colnames(y[,c(1:3)]))
@@ -89,6 +94,9 @@ run_lasso <- function(x,y, column_num) {
   lasso_80_sen_spe = matrix(NA,splits,3)
   colnames(lasso_80_sen_spe) <- paste(colnames(y[,c(1:3)]))
   
+  cl = makeCluster(number_cores, type="FORK")
+  registerDoParallel(cl)
+  
   #go over every y
   set.seed(42)
   # for (j in 1:3){
@@ -99,12 +107,9 @@ run_lasso <- function(x,y, column_num) {
       splitz = sample.split(y[[j]], .75)
       x_train <- x[splitz,]
       y_train <- y[splitz,j]
-      x_test <- x[!splitz,]
-      y_test <- y[!splitz,j]
+      x_test <- x[!(splitz),]
+      y_test <- y[!(splitz),j]
       
-      
-      cl <- makeCluster(20)
-      registerDoParallel(cl)
       
       #find best lambda
       mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=1,family="binomial", parallel = TRUE)
@@ -163,6 +168,8 @@ run_lasso <- function(x,y, column_num) {
     }
   # }
   
+  stopCluster(cl)
+    
   #calculate and print results
   cat("\n Lasso results for", colnames(lasso_auc)[column_num],"\n")
   
@@ -208,8 +215,6 @@ run_lasso <- function(x,y, column_num) {
 #y: the predicted values bucket
 run_ridge <- function(x,y,column_num) {
   
-  splits <- 10000
-  
   ridge_auc <- matrix(NA,splits,3)
   colnames(ridge_auc) <- paste(colnames(y[,c(1:3)]))
   
@@ -228,6 +233,9 @@ run_ridge <- function(x,y,column_num) {
   ridge_80_sen_spe = matrix(NA,splits,3)
   colnames(ridge_80_sen_spe) <- paste(colnames(y[,c(1:3)]))
   
+  cl = makeCluster(number_cores, type="FORK")
+  registerDoParallel(cl)
+  
   #go over every y
   set.seed(42)
   # for (j in 1:3){
@@ -238,11 +246,12 @@ run_ridge <- function(x,y,column_num) {
       splitz = sample.split(y[[j]], .75)
       x_train <- x[splitz,]
       y_train <- y[splitz,j]
-      x_test <- x[!splitz,]
-      y_test <- y[!splitz,j]
+      x_test <- x[!(splitz),]
+      y_test <- y[!(splitz),j]
+      
       
       #find best lambda
-      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial")
+      mod <- cv.glmnet(x=as.matrix(x_train),y=y_train,alpha=0,family="binomial", parallel = TRUE)
       opt_lambda <- mod$lambda.min
       
       #get model
@@ -288,6 +297,8 @@ run_ridge <- function(x,y,column_num) {
     }
   # }
   
+  stopCluster(cl)
+  
   #calculate and print results
   cat("\n Ridge results \n")
   
@@ -319,7 +330,6 @@ run_ridge <- function(x,y,column_num) {
 # relieff (according to P_value)
 ##########################################
 # library(stir)
-library(doParallel)
 
 
 # x: the features bucket
@@ -330,19 +340,15 @@ library(doParallel)
 # 3-Depression_mod_above_at_phq
 run_stir <- function(x,y,column_num) {
   
-  splits <- 10000
-  
   # create a parallel socket clusters
-  cl <- makeCluster(20)
+  cl = makeCluster(number_cores, type="FORK")
   registerDoParallel(cl)
   
   features <- matrix(0,nrow = ncol(x), ncol = 1)
   rownames(features) <- paste(colnames(x))
   
-  results <- NA
-    
   results_list = foreach(i = seq(splits), .packages=c('stir','caTools') ) %dopar% {
-    
+   
       set.seed(i) # to keep iterations consistent
       
       #split the data splits times to 75% training and 25% test
@@ -350,12 +356,11 @@ run_stir <- function(x,y,column_num) {
       x_train <- x[splitz,]
       y_train <- y[splitz,column_num]
       
-      
       RF.method = "multisurf"
       metric <- "manhattan"
       neighbors <- find.neighbors(x_train, y_train, k = 0, method = RF.method)
       res <- stir(x_train, neighbors, k = 0, metric = metric, method = RF.method)$STIR_T
-      res <- rownames(res[res$t.pval < 0.05,])
+      res <- rownames(res[ (!is.na(res$t.pval) & res$t.pval < 0.05),])
       
     }
   
@@ -392,44 +397,54 @@ run_stir <- function(x,y,column_num) {
 library(randomForest)
 library(tree)
 
-run_tree_RF <- function(x,y,column_num) {
-  
-  splits <- 10000
+run_tree_RF <- function(x,y) {
   
   features <- matrix(0,nrow = ncol(x), ncol = 2)
   rownames(features) <- paste(colnames(x))
   colnames(features) <- c("MeanDecreaseAccuracy","MeanDecreaseGini")
   
-  features_tr <- matrix(0,nrow = ncol(x), ncol = 1)
-  rownames(features_tr) <- paste(colnames(x))
+  features_tree <- matrix(0,nrow = ncol(x), ncol = 1)
+  rownames(features_tree) <- paste(colnames(x))
+  
+  rf_auc = 0
+  tree_auc = 0
   
   number_of_features = c(0,0)
   
+  set.seed(42)
   for (i in 1:splits) {
     
-    samp <- sample.split(y[[column_num]], SplitRatio = .75)
-    xtr <- subset(x, samp == TRUE)
-    ytr <- subset(y, samp == TRUE)
-    #Bagging
-    # samp <- sample(nrow(y),size= (0.75*nrow(y)), replace = T)
-    # xtr <- x[samp,]
-    
+    splitz = sample.split(y, .75)
+    x_train <- x[splitz,]
+    y_train <- y[splitz]
+    x_test <- x[!splitz,]
+    y_test <- y[!splitz]
+
     #RF
-    mod1 <- randomForest(x=xtr,y=as.factor(ytr[[column_num]]), importance = TRUE)
+    mod1 <- randomForest(x=x_train,y=as.factor(y_train), importance = TRUE)
     res <- mod1$importance
     index = ncol(res) -1
     features = features + res[match(rownames(features),rownames(res)),index:(index+1)]
     
+    #calculate AUC
+    y_predicted <- predict(mod1, newdata = x_test, type ="prob")[,2]
+    pred <- prediction(y_predicted, y_test)
+    rf_auc = rf_auc + performance(pred, measure = "auc")@y.values[[1]]
+    
     # tree
-    data_= cbind(y[[column_num]],x)[samp,]
-    colnames(data_)[1] = colnames(y)[column_num]
-    mode_tree= tree(as.factor(Lifetime_Suicide_Attempt) ~ ., data_)
+    data_= cbind(y_train,x_train)
+    mode_tree = tree(as.factor(y_train) ~ ., data_)
     used_features = summary(mode_tree)$used
-    features_tr[as.character(used_features),1] = features_tr[as.character(used_features),1] +1 
+    features_tree[as.character(used_features),1] = features_tree[as.character(used_features),1] + 1 
     #how many were selected 
     number_of_features[1] = number_of_features[1] + length(used_features) 
     #add one to the number of times more than 1 feature was selected 
     number_of_features[2] = ifelse( length(used_features) > 0 , number_of_features[2] +1, number_of_features[2] )
+    
+    #calculate AUC
+    y_predicted <- predict(mode_tree, newdata = x_test)[,2]
+    pred <- prediction(y_predicted, y_test)
+    tree_auc = tree_auc + performance(pred, measure = "auc")@y.values[[1]]
     
   }
   
@@ -437,32 +452,32 @@ run_tree_RF <- function(x,y,column_num) {
   features = features/splits
   
   #MeanDecreaseAccuracy
-  features_MeanDecreaseAccuracy = features[order(features[,1], decreasing = TRUE),1,drop=FALSE]
-  print(features_MeanDecreaseAccuracy)
-  plot(features_MeanDecreaseAccuracy ,xlab="" ,ylab="", xaxt="n" , main="MeanDecreaseAccuracy", pch = 19)
-  axis(1, at=1:nrow(features), labels=rownames(features_MeanDecreaseAccuracy))
-  cat("\n")
+  # features_MeanDecreaseAccuracy = features[order(features[,1], decreasing = TRUE),1,drop=FALSE]
+  # print(features_MeanDecreaseAccuracy)
+  # plot(features_MeanDecreaseAccuracy ,xlab="" ,ylab="", xaxt="n" , main="MeanDecreaseAccuracy", pch = 19)
+  # axis(1, at=1:nrow(features), labels=rownames(features_MeanDecreaseAccuracy))
+  # cat("\n")
   
   #MeanDecreaseGini
   features_MeanDecreaseGini = features[order(features[,2], decreasing = TRUE),2,drop=FALSE]
   print(features_MeanDecreaseGini)
   plot(features_MeanDecreaseGini ,xlab="" ,ylab="", xaxt="n" , main="MeanDecreaseGini", pch = 19)
   axis(1, at=1:nrow(features), labels=rownames(features_MeanDecreaseGini))
+  cat("\n RF AUC: ", rf_auc/splits, sep = "\t")
   
   
   cat("\n\nSelected Features According to Decision Trees \n")
-  features_tr = features_tr[order(features_tr[,1], decreasing = TRUE),1,drop=FALSE]
-  print(features_tr)
-  plot(features_tr ,xlab="" ,ylab="", xaxt="n" , main="tree features", pch = 19)
-  axis(1, at=1:nrow(features_tr), labels=rownames(features_tr))
+  features_tree = features_tree[order(features_tree[,1], decreasing = TRUE),1,drop=FALSE]
+  print(features_tree)
+  plot(features_tree ,xlab="" ,ylab="", xaxt="n" , main="tree features", pch = 19)
+  axis(1, at=1:nrow(features_tree), labels=rownames(features_tree))
   
   # avg. number of selected features. 
   cat("\n Avg. selected features")
   cat("\n all models: " , number_of_features[1]/splits, sep = "\t")  
   cat("\n only models that selected features: " , number_of_features[1]/number_of_features[2], sep = "\t")  
   cat("\n")
-  
-  
+  cat("\n tree AUC: ", tree_auc/splits, sep = "\t")
 }
 
 
