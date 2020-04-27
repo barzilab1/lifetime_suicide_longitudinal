@@ -1,5 +1,3 @@
-library(Amelia)
-library(PerformanceAnalytics)
 
 summary(Trauma_bucket)
 
@@ -82,29 +80,30 @@ print("Trauma")
 ###########################################
 
 #amelia data set
-x_total = merge(Y_bucket,Trauma_bucket_amelia[,-9])
+x_total = merge(Y_bucket,Trauma_bucket_amelia)
 
 # #original data set
 # x_total = merge(Y_bucket,Trauma_bucket[,-9])
 # #remove rows with NA 
 # x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
 
+x_total = x_total[,! names(x_total) %in% c("above11")]
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-run_lasso(x,y,2)
-run_ridge(x,y)
+run_lasso(x,y[,2])
+run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
 ##########################################
-run_stir(x,y,2)
+run_stir(x,y[,2])
 
 ##########################################
 # Random Forest 
 ##########################################
-run_tree_RF(x,y,2)
+run_tree_RF(x,y[,2])
 
 ###########################################
 #Check Trauma weird results 

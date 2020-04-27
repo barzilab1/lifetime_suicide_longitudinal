@@ -35,12 +35,13 @@ cross-sectional:
 
 
 #### How to Run:
-1. Run "Load_DB.R" to load all data from csv files
-2. Run Function_util.R 
-3. Each bucket can be run as separate script after "load_DB.R" was run except for the combined bucket  
+1. Make sure all the data-sets are under the folder "Data"
+2. To run locally, run main.R
+3. To run on PMACS, run main.sh. the output will be in main.Rout and Rplots.pdf
+4. Each bucket can be run as separate script after "load_DB.R" and "function_util.R" were run, except for the combined bucket  
   
 ---
-#### Open Questions:
+####  Questions:
 **Q1.** Do we also include kids with Lifetime suicide attempt before goassess time?  
   - Don't have the information  
 

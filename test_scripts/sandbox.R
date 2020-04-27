@@ -127,13 +127,38 @@ grid(nx = 15, ny = 10, col = "lightgray", lty = "dotted", lwd = par("lwd"), equi
 # grid(nx = 15, ny = 15, col = "lightgray", lty = "dotted",
 #      lwd = par("lwd"), equilogs = TRUE)
 
-
-
-
 index.tpr = which(perf@y.values[[1]] == max(perf@y.values[[1]]))
 min.fpr = min(perf@x.values[[1]][index.tpr]) 
 index.fpr = which(perf@x.values[[1]] == min.fpr)[1] #incase there is more then one index
 cutoff[i,j] = perf@alpha.values[[1]][index.fpr]
+
+##### PR CUV
+#########################################
+library(PRROC)
+library(caret)
+roc = roc.curve(scores.class0=y_predicted[y_test == 1],scores.class1=y_predicted[y_test == 0], curve = T)  
+pr = pr.curve(scores.class0=y_predicted[y_test == 1],scores.class1=y_predicted[y_test == 0], curve = T,  rand.compute = T)
+results = opt.cut.pr(pr$curve)
+new_measurements["pr",i] = pr$auc.integral
+new_measurements["sen",i] = pr$curve[results["ind"],1]
+new_measurements["ppv",i] = pr$curve[results["ind"],2]
+
+# ind = which(roc$curve[,3] == results["cutoff"])
+new_measurements["auc",i] = roc$auc
+# new_measurements["spe",i] = 1 - roc$curve[ind,1]
+
+y_results = ifelse(y_predicted >= results["cutoff"],1,0)
+cm = confusionMatrix(data = as.factor(y_results) ,reference = as.factor(y_test), positive = "1")
+new_measurements["spe",i] = cm$byClass["Specificity"]
+new_measurements["npv",i] = cm$byClass["Neg Pred Value"]
+
+
+y_ = sum(y_test)/(length(y_test)-sum(y_test))
+plot(pr)
+lines(c(0,1),c(y_,y_),col = "gray", lty = 4) #baseline
+
+
+
 
 #########
 string_name[grepl(paste(string_test, collapse = '|'), string_name)]

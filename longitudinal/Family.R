@@ -1,7 +1,3 @@
-library(Amelia)
-library(PerformanceAnalytics)
-library(parcor)
-
 
 summary(Family_bucket[,-1])
 # chart.Correlation(Family_bucket[,-1])
@@ -94,15 +90,17 @@ x_total = merge(Y_bucket,Family_bucket_amelia)
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
-run_lasso(x,y,2)
-run_ridge(x,y)
+run_lasso(x,y[,2])
+run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
 ##########################################
-run_stir(x,y,2)
+run_stir(x,y[,2])
 
 ##########################################
 # Random Forest 
 ##########################################
-run_tree_RF(x,y,2)
+run_tree_RF(x,y[,2])
+
+
