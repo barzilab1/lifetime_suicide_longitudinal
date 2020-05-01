@@ -51,6 +51,11 @@ PNC_diagnoses.csv
 PNC over 11 file for Elina with PNC FH.csv
 cor_clinic_cross.csv
 main.sh
-res_Relieff.xlsx
-res_lasso.xlsx
-res_rf.xlsx
+res_Relieff.csv
+res_lasso.csv
+res_rf.csv
+all.csv
+all_p.csv
+b_res_Relieff.csv
+b_res_lasso.csv
+b_res_rf.csv

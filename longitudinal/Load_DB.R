@@ -1,4 +1,3 @@
-library("readr")
 
 #read the CSV. 
 PHQ_Data = read_csv("Data/PHQ9_file_for_Elina_with_PNC_FH.csv")

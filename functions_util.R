@@ -178,6 +178,8 @@ run_lasso <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(lasso_measurements, 1, mean, na.rm = T))
+  cat("\SD: \n")
+  print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")
   
   #get sen 80%
@@ -185,6 +187,8 @@ run_lasso <- function(x,y) {
   cat("\nSensitivity", colMeans(lasso_80_sen, na.rm = T), sep="\t" ) 
   cat("\nSpecificity", colMeans(lasso_80_sen_spe, na.rm = T), sep="\t")
   cat("\n")
+  
+  return(features)
 }
 
 
@@ -274,6 +278,8 @@ run_ridge <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(ridge_measurements, 1, mean, na.rm = T))
+  cat("\SD: \n")
+  print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")
   
   #get sen 80%
@@ -339,6 +345,8 @@ run_stir <- function(x,y) {
   cat("\nall 10k models: " , tot_number/splits, sep = "\t")  
   cat("\nonly models that selected features: " , tot_number/tot_selected_model, sep = "\t")  
   cat("\n")
+  
+  return(features)
   
 }
 
@@ -443,6 +451,8 @@ run_tree_RF <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(rf_measurements, 1, mean, na.rm = T))
+  cat("\SD: \n")
+  print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")  
   
   # cat("\n\nSelected Features According to Decision Trees \n")
@@ -458,6 +468,8 @@ run_tree_RF <- function(x,y) {
   # cat("\n")
   # cat("\n tree AUC: ", tree_auc/splits, sep = "\t")
   # cat("\n")
+  
+  return(features_MeanDecreaseGini)
 }
 
 
