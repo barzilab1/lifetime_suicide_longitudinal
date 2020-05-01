@@ -178,7 +178,7 @@ run_lasso <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(lasso_measurements, 1, mean, na.rm = T))
-  cat("\SD: \n")
+  cat("\nSD: \n")
   print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")
   
@@ -278,7 +278,7 @@ run_ridge <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(ridge_measurements, 1, mean, na.rm = T))
-  cat("\SD: \n")
+  cat("\nSD: \n")
   print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")
   
@@ -451,7 +451,7 @@ run_tree_RF <- function(x,y) {
   #get measurements closest to (0,1)
   cat("\nmeasurements: \n")
   print(apply(rf_measurements, 1, mean, na.rm = T))
-  cat("\SD: \n")
+  cat("\nSD: \n")
   print(apply(lasso_measurements, 1, SD, na.rm = T))
   cat("\n")  
   

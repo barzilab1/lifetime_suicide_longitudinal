@@ -15,7 +15,7 @@ for (j in c("mean_rank","mean_score","sum_scale")){
   
     col_name = paste(j,i,sep = "_" )
     
-    features = all_features[order(all_features[[j]], decreasing = TRUE),c("feature")]
+    features = all_features[order(all_features[[j]], decreasing = TRUE),c("feature"),drop = F]
     features_list[[col_name]] = features$feature[1:i]
     
   }
@@ -30,13 +30,13 @@ for (i in names(features_list)){
   cat("\n###########################################\n")
   cat(i)
   
-  x_total = merge(Y_bucket, combined_bucket_amelia)
+  x_total = merge(Y_bucket, combined)
   
   y = x_total[, c(2:5)]
   x = x_total[,-c(1:5)]
   
   run_ridge(x,y[,2])
-  res_rf = run_tree_RF(x,y[,2])
+  run_tree_RF(x,y[,2])
   cat("\n###########################################\n")
 }
 
