@@ -1,5 +1,5 @@
 
-# all_features <- read_csv("all_p.csv")
+# all_features <- read_csv("all.csv")
 
 demographics_features = c("bblid","sex","age","race2_White","race2_Black","goassessPhqDurMonths")
 
@@ -10,8 +10,11 @@ features_list$lasso = lasso_selected_features$feature[1:13]
 relieff_selected_features = all_features[order(all_features$rank_Relieff, decreasing = TRUE),c("feature","rank_Relieff")]
 features_list$relieff = relieff_selected_features$feature[1:52]
 
+rf_selected_features = all_features[order(all_features$rank_Relieff, decreasing = TRUE),c("feature","rank_rf")]
+features_list$rf = relieff_selected_features$feature[1:45]
+
 for (j in c("mean_rank","mean_score","sum_scale")){
-  for (i in c(5,10,15,20)){
+  for (i in c(5,10,13,14,15,20,25,30,35)){
   
     col_name = paste(j,i,sep = "_" )
     
@@ -29,6 +32,7 @@ for (i in names(features_list)){
   
   cat("\n###########################################\n")
   cat(i)
+  cat("\n###########################################\n")
   
   x_total = merge(Y_bucket, combined)
   
@@ -37,6 +41,6 @@ for (i in names(features_list)){
   
   run_ridge(x,y[,2])
   run_tree_RF(x,y[,2])
-  cat("\n###########################################\n")
+  
 }
 

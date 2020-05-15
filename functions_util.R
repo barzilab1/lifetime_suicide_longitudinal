@@ -279,7 +279,7 @@ run_ridge <- function(x,y) {
   cat("\nmeasurements: \n")
   print(apply(ridge_measurements, 1, mean, na.rm = T))
   cat("\nSD: \n")
-  print(apply(lasso_measurements, 1, SD, na.rm = T))
+  print(apply(ridge_measurements, 1, SD, na.rm = T))
   cat("\n")
   
   #get sen 80%
@@ -452,7 +452,7 @@ run_tree_RF <- function(x,y) {
   cat("\nmeasurements: \n")
   print(apply(rf_measurements, 1, mean, na.rm = T))
   cat("\nSD: \n")
-  print(apply(lasso_measurements, 1, SD, na.rm = T))
+  print(apply(rf_measurements, 1, SD, na.rm = T))
   cat("\n")  
   
   # cat("\n\nSelected Features According to Decision Trees \n")
