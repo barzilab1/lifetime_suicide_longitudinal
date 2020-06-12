@@ -75,8 +75,10 @@ Cognitive_bucket_amelia_scaled[,c(24:48)] = scale(Cognitive_bucket_amelia_scaled
 Cognitive_bucket_combined_scaled = Cognitive_bucket_combined
 Cognitive_bucket_combined_scaled[,c(24:48)] = scale(Cognitive_bucket_combined_scaled[,c(24:48)])
 
-
+#######################################
 ########cog without raw
+#######################################
+
 #remove empty rows from origin cog
 summary(Cognitive_bucket)
 Cognitive_bucket = Cognitive_bucket[rowSums(is.na(Cognitive_bucket)) < 26,]
@@ -88,38 +90,11 @@ Cognitive_bucket = Cognitive_bucket[Cognitive_bucket$battery_valid_collapsed != 
 Cognitive_bucket = Cognitive_bucket[,! names(Cognitive_bucket) %in% c("battery_valid_collapsed")]
 
 
-#######################################
-#Logistic regression 
-#######################################
-
-# #amelia data set
-# x = merge(Y_bucket,Cognitive_bucket_amelia_scaled)
-# cogni_b = Cognitive_bucket_amelia_scaled[,-1]
-# 
-# #original data set
-# x = merge(Y_bucket,Cognitive_bucket_combined_scaled)
-# cogni_b = Cognitive_bucket_combined_scaled[,-1]
-# 
-# 
-# resids = create_resids(cogni_b)
-# 
-# # add residual columns to data frame
-# x <- data.frame(x,resids)
-# 
-# 
-# ### Lifetime_Suicide_Attempt
-# 
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-# summary(mod_resid)
-# get_logistic_results(mod_resid)[-1,]
-# pR2(mod_resid)
+cognitive_names = names(Cognitive_bucket)[-1]
 
 
 cat("\n\n###########################################")
 print("Cognitive")
-###########################################
-#Lasso and ridge with CV
-###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Cognitive_bucket_amelia)
@@ -132,12 +107,16 @@ x_total = merge(Y_bucket,Cognitive_bucket_amelia)
 #data without raw
 x_total = merge(Y_bucket,Cognitive_bucket)
 
-
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+
+###########################################
+#Lasso and ridge with CV
+###########################################
 # run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
+run_ridge(x,y[,2])
+
 ##########################################
 # relieff (according to P_value)
 ##########################################
@@ -146,6 +125,6 @@ x = x_total[,-c(1:5)]
 ##########################################
 # Random Forest 
 ##########################################
-# run_tree_RF(x,y[,2])
+run_tree_RF(x,y[,2])
 
 

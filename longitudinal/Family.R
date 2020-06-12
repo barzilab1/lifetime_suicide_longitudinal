@@ -26,12 +26,6 @@ Family_bucket_amelia = amelia_fit$imputations[[1]]
 describe(Family_bucket_amelia[,-1])
 summary(Family_bucket_amelia)
 
-#scale only the non-binary features (AvgParentEducation)
-Family_bucket_amelia_scaled = Family_bucket_amelia
-Family_bucket_amelia_scaled$AvgParentEducation = scale(Family_bucket_amelia_scaled$AvgParentEducation) 
-Family_bucket_scaled = Family_bucket
-Family_bucket_scaled$AvgParentEducation = scale(Family_bucket_scaled$AvgParentEducation) 
-
 
 #Frequency
 sum(Family_bucket$Ran_substance_FH, na.rm = TRUE)/nrow(Family_bucket) #0.1475
@@ -41,41 +35,10 @@ sum(Family_bucket$Ran_psychosis_FH, na.rm = TRUE)/nrow(Family_bucket) #0.0293
 sum(Family_bucket$Ran_Sui_attempt_or_death_FH, na.rm = TRUE)/nrow(Family_bucket) #0.0553
 sum(Family_bucket$Parents_Sep_Divorce, na.rm = TRUE)/nrow(Family_bucket) #0.167
 
-#######################################
-#Logistic regression 
-#######################################
-
-# #amelia data set
-# x = merge(Y_bucket,Family_bucket_amelia_scaled)
-# fam_b = Family_bucket_amelia_scaled[,-1]
-# 
-# #original data set
-# x = merge(Y_bucket,Family_bucket_scaled)
-# fam_b = Family_bucket_scaled[,-1]
-# 
-# 
-# resids = create_resids(fam_b)
-# 
-# # add residual columns to data frame
-# x <- data.frame(x,resids)
-# 
-# ### Lifetime_Suicide_Attempt
-# set.seed(42)
-# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(fam_b),data=x,family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-# 
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-# summary(mod_resid)
-# get_logistic_results(mod_resid)[-1,]
-# pR2(mod_resid)
+family_names = names(Family_bucket)[-1]
 
 cat("\n\n###########################################")
 print("Family")
-###########################################
-#Lasso and ridge with CV 
-###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Family_bucket_amelia)
@@ -90,8 +53,11 @@ x_total = merge(Y_bucket,Family_bucket_amelia)
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+###########################################
+#Lasso and ridge with CV 
+###########################################
 # run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
+run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
@@ -101,6 +67,6 @@ x = x_total[,-c(1:5)]
 ##########################################
 # Random Forest 
 ##########################################
-# run_tree_RF(x,y[,2])
+run_tree_RF(x,y[,2])
 
 

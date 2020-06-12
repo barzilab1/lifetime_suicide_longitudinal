@@ -39,11 +39,6 @@ describe(Demographics_bucket[,-1])
 boxplot(Demographics_bucket[,-1])
 
 
-#scale only the non-binary features 
-Demographics_bucket_scaled = Demographics_bucket
-Demographics_bucket_scaled[,c(2,5:6)] = scale(Demographics_bucket[,c(2,5:6)]) 
-describe(Demographics_bucket_scaled[,-1])
-
 #Frequency
 sum(Demographics_bucket$sex)/nrow(Demographics_bucket) #0.476
 sum(Demographics_bucket$ethnicity)/nrow(Demographics_bucket) #0.937
@@ -51,62 +46,11 @@ sum(Demographics_bucket$race2_White)/nrow(Demographics_bucket) #0.400
 sum(Demographics_bucket$race2_Black)/nrow(Demographics_bucket) #0.487
 sum(Demographics_bucket$ethnicity)/nrow(Demographics_bucket) #0.937
 
-#######################################
-#Logistic regression 
-#######################################
 
-# x = merge(Y_bucket,Demographics_bucket_scaled)
-# demo_b = Demographics_bucket_scaled[,-1]
-# 
-# resids = create_resids(demo_b)
-# 
-# # add residual columns to data frame
-# x <- data.frame(x,resids)
-# 
-# ### Lifetime_Suicide_Attempt
-# set.seed(42)
-# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(demo_b),data=x,family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-# 
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-# summary(mod_resid)
-# get_logistic_results(mod_resid)[-1,]
-# pR2(mod_resid)
-# 
-# 
-# # Run with the opposit (multiply with -1) of all negative features
-# temp_data = Demographics_bucket
-# 
-# #regressed regression data
-# temp_data$race2_White = temp_data$race2_White * -1
-# temp_data$race2_White = temp_data$race2_White + 1
-# 
-# #scale 
-# temp_data[,4:6] = scale(temp_data[,4:6]) 
-# 
-# x = merge(Y_bucket,temp_data)
-# demo_b = temp_data[,-1]
-# 
-# resids = create_resids(demo_b)
-# 
-# # add residual columns to data frame
-# x <- data.frame(x,resids)
-# 
-# #regressed regression
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-# summary(mod_resid)
-# get_logistic_results(mod_resid)[-1,]
-# pR2(mod_resid)
-
-
+demographics_names = names(Demographics_bucket)[-1]
 
 cat("\n\n###########################################")
 print("Demographics")
-###########################################
-#Lasso and ridge with CV 
-###########################################
 
 #original data
 x_total = merge(Y_bucket,Demographics_bucket)
@@ -114,8 +58,12 @@ x_total = merge(Y_bucket,Demographics_bucket)
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+###########################################
+#Lasso and ridge with CV 
+###########################################
 # run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
+run_ridge(x,y[,2])
+
 ##########################################
 # relieff (according to P_value)
 ##########################################
@@ -124,4 +72,4 @@ x = x_total[,-c(1:5)]
 ##########################################
 # Random Forest 
 ##########################################
-# run_tree_RF(x,y[,2])
+run_tree_RF(x,y[,2])

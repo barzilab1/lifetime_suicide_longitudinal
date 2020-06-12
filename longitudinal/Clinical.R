@@ -71,50 +71,10 @@ Clinical_bucket_amelia = amelia_fit$imputations[[1]]
 describe(Clinical_bucket_amelia[,-1])
 summary(Clinical_bucket_amelia[,-1])
 
-#scale only the non-binary features 
-# Clinical_bucket_amelia_scaled = Clinical_bucket_amelia
-# Clinical_bucket_amelia_scaled = scale(Clinical_bucket_amelia_scaled) 
-# Clinical_bucket_scaled = Clinical_bucket
-# Clinical_bucket_scaled = scale(Clinical_bucket_scaled) 
-
-
-
-#######################################
-#Logistic regression 
-#######################################
-
-#amelia data set
-# x = 
-# clinic_b = 
-
-# #original data set
-# x = merge(Y_bucket,Clinical_bucket)
-# clinic_b = Clinical_bucket[,-1]
-# 
-# resids = create_resids(clinic_b)
-# 
-# # add residual columns to data frame
-# x <- data.frame(x,resids)
-# 
-# ### Lifetime_Suicide_Attempt
-# set.seed(42)
-# mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(clinic_b),data=x,family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-# 
-# mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-# summary(mod_resid)
-# get_logistic_results(mod_resid)[-1,]
-# pR2(mod_resid)
-
-
+clinical_names = names(Clinical_bucket)[!(names(Clinical_bucket) %in% c("bblid", "above11"))]
 
 cat("\n\n###########################################")
 print("Clinical")
-###########################################
-#Lasso and ridge with CV
-##########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Clinical_bucket_amelia)
@@ -130,8 +90,11 @@ x_total = x_total[,! names(x_total) %in% c("above11")]
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+###########################################
+#Lasso and ridge with CV
+##########################################
 # run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
+run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
@@ -141,7 +104,7 @@ x = x_total[,-c(1:5)]
 ##########################################
 # Random Forest 
 ##########################################
-# run_tree_RF(x,y[,2])
+run_tree_RF(x,y[,2])
 
 
 

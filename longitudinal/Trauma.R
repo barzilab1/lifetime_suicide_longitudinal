@@ -1,4 +1,3 @@
-
 summary(Trauma_bucket)
 
 #sexual assault or attack
@@ -40,44 +39,11 @@ sum(Trauma_bucket$ptd007, na.rm = TRUE)/nrow(Y_bucket) #0.059
 sum(Trauma_bucket$ptd008, na.rm = TRUE)/nrow(Y_bucket) #0.101
 sum(Trauma_bucket$ptd009, na.rm = TRUE)/nrow(Y_bucket) #0.118
 
-# dt=data.table(Trauma_bucket)
-# dt[, lapply(.SD, mean, na.rm=TRUE), by = above11]
 
-
-#######################################
-#Logistic regression 
-#######################################
-
-# #amelia data set
-# #TODO remove above 11
-# x = merge(Y_bucket,Trauma_bucket_amelia)
-# trauma_b = Trauma_bucket_amelia[,-1]
-# 
-# #original data set
-# x = merge(Y_bucket,Trauma_bucket)
-# trauma_b = Trauma_bucket[,-1]
-# 
-# 
-# ### Lifetime_Suicide_Attempt
-# set.seed(42)
-# mod_raw <- glm( Lifetime_Suicide_Attempt ~ as.matrix(trauma_b)  ,data=x,family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-
-# mod_raw <- glm( Lifetime_Suicide_Attempt ~ (ptd001+ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009), data=x[x$above11==1,],family="binomial")
-# summary(mod_raw)
-# get_logistic_results(mod_raw)[-1,]
-# pR2(mod_raw)
-# visreg(mod_raw,"ptd006")
-# visreg(mod_raw,"ptd003")
-# visreg(mod_raw,"ptd0045")
+trauma_names = names(Trauma_bucket)[!(names(Trauma_bucket) %in% c("bblid", "above11"))]
 
 cat("\n\n###########################################")
 print("Trauma")
-###########################################
-#Lasso and ridge with CV
-###########################################
 
 #amelia data set
 x_total = merge(Y_bucket,Trauma_bucket_amelia)
@@ -92,8 +58,11 @@ x_total = x_total[,! names(x_total) %in% c("above11")]
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+###########################################
+#Lasso and ridge with CV
+###########################################
 # run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
+run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
@@ -103,7 +72,7 @@ x = x_total[,-c(1:5)]
 ##########################################
 # Random Forest 
 ##########################################
-# run_tree_RF(x,y[,2])
+run_tree_RF(x,y[,2])
 
 ###########################################
 #Check Trauma weird results 
