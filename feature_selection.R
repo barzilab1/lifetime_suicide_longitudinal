@@ -29,6 +29,6 @@ all_features$score_rf_scaled = (all_features$score_rf*10000)/max(all_features$sc
 all_features$mean_score = round(rowMeans(all_features[,c("score_lasso", "score_Relieff", "score_rf_scaled")]), digits = 3)
 
 
-write.csv(all_features, "all.csv")
+write.csv(all_features, "feature_selected_results.csv")
 
 

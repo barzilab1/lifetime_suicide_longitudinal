@@ -55,7 +55,7 @@ opt.cut.roc = function(perf, pred){
 }
 
 
-# global variables of the following functions
+# global variables of the below functions
 splits <- 10000
 # Calculate the number of cores
 number_cores <- detectCores()
@@ -76,7 +76,6 @@ run_lasso <- function(x,y) {
   rownames(lasso_measurements) = c("auc","sen","spe","acc","ppv","npv")
   
   lasso_80_sen = matrix(NA,splits,1)
-  
   lasso_80_sen_spe = matrix(NA,splits,1)
   
   cl = makeCluster(number_cores, type="FORK")
@@ -201,7 +200,6 @@ run_ridge <- function(x,y) {
   rownames(ridge_measurements) = c("auc","sen","spe","acc","ppv","npv")
   
   ridge_80_sen = matrix(NA,splits,1)
-  
   ridge_80_sen_spe = matrix(NA,splits,1)
   
   cl = makeCluster(number_cores, type="FORK")
@@ -473,3 +471,18 @@ run_tree_RF <- function(x,y) {
 }
 
 
+# y: the main variable to check significance with 
+#data:  a matrix of feature to compre with
+check_significance = function(y,data){
+  
+  results = matrix(F, nrow = 1 ,ncol = length(data))
+  colnames(results) = names(data)
+  
+  for (i in 1:length(data)) {
+    difference = as.matrix(y - data[,i])
+    hist(difference, main = names(data)[i])
+    interval = mean(difference) + c(-2,2)*sd(difference)
+    results[i] = ifelse( interval[1] <= 0 & 0 <= interval[2], F, T)
+  }
+  print(results)
+}
