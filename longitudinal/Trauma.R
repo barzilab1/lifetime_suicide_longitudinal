@@ -42,16 +42,19 @@ sum(Trauma_bucket$ptd009, na.rm = TRUE)/nrow(Y_bucket) #0.118
 
 trauma_names = names(Trauma_bucket)[!(names(Trauma_bucket) %in% c("bblid", "above11"))]
 
-cat("\n\n###########################################")
-print("Trauma")
+cat("\n\n###########################################Trauma")
 
 #amelia data set
 x_total = merge(Y_bucket,Trauma_bucket_amelia)
 
-# #original data set
-# x_total = merge(Y_bucket,Trauma_bucket[,-9])
-# #remove rows with NA 
-# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+if(no_amelia){
+  #original data set
+  x_total = merge(Y_bucket,Trauma_bucket)
+  #remove rows with NA
+  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
+}
+
+cat("\nnumber of rows: ", nrow(x_total))
 
 x_total = x_total[,! names(x_total) %in% c("above11")]
 

@@ -93,18 +93,19 @@ Cognitive_bucket = Cognitive_bucket[,! names(Cognitive_bucket) %in% c("battery_v
 cognitive_names = names(Cognitive_bucket)[-1]
 
 
-cat("\n\n###########################################")
-print("Cognitive")
+cat("\n\n###########################################Cognitive")
 
 #amelia data set
 x_total = merge(Y_bucket,Cognitive_bucket_amelia)
 
-#original data set
-# x_total = merge(Y_bucket,Cognitive_bucket_combined)
-# #remove empty rows 
-# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+if(no_amelia){
+  # original data set
+  x_total = merge(Y_bucket,Cognitive_bucket_combined)
+  #remove empty rows
+  x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+}
 
-#data without raw
+#data without raw - only summary (no na) 
 x_total = merge(Y_bucket,Cognitive_bucket)
 
 y = x_total[, c(2:5)]

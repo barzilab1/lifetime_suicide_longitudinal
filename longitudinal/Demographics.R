@@ -49,8 +49,7 @@ sum(Demographics_bucket$ethnicity)/nrow(Demographics_bucket) #0.937
 
 demographics_names = names(Demographics_bucket)[-1]
 
-cat("\n\n###########################################")
-print("Demographics")
+cat("\n\n###########################################Demographics")
 
 #original data
 x_total = merge(Y_bucket,Demographics_bucket)

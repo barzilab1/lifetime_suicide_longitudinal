@@ -73,17 +73,19 @@ summary(Clinical_bucket_amelia[,-1])
 
 clinical_names = names(Clinical_bucket)[!(names(Clinical_bucket) %in% c("bblid", "above11"))]
 
-cat("\n\n###########################################")
-print("Clinical")
+print("\n\n###########################################Clinical")
 
 #amelia data set
 x_total = merge(Y_bucket,Clinical_bucket_amelia)
 
-# #original data set
-# x_total = merge(Y_bucket,Clinical_bucket)
-# #remove empty tows 
-# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
+if(no_amelia){
+  #original data set
+  x_total = merge(Y_bucket,Clinical_bucket)
+  #remove empty tows
+  x_total = x_total[(rowSums(is.na(x_total))== 0),]
+}
 
+cat("\nnumber of rows: ", nrow(x_total))
 
 x_total = x_total[,! names(x_total) %in% c("above11")]
 

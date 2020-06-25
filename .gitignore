@@ -59,3 +59,8 @@ all_p.csv
 b_res_Relieff.csv
 b_res_lasso.csv
 b_res_rf.csv
+features_list.csv
+results.csv
+rf_auc.csv
+ridge_auc.csv
+Rplot.png

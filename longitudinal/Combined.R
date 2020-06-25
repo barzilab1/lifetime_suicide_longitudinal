@@ -1,5 +1,5 @@
 ###########################################
-#all features
+#all 131 features
 ###########################################
 
 Clinical_bucket2 = Clinical_bucket[,! names(Clinical_bucket) %in% c("above11")]
@@ -47,10 +47,19 @@ combined_bucket_amelia = amelia_fit$imputations[[1]]
 summary(combined_bucket_amelia[,-1])
 
 
-cat("\n\n###########################################")
-print("Combined")
+cat("\n\n###########################################Combined")
 
 x_total = merge(Y_bucket, combined_bucket_amelia)
+
+if(no_amelia){
+  #original data set
+  x_total = merge(Y_bucket,combined_bucket)
+  #remove rows with NA
+  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
+}
+
+cat("\nnumber of rows: ", nrow(x_total))
+
 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]

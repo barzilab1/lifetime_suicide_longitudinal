@@ -163,22 +163,22 @@ check_significance(rf_auc$lasso, rf_auc[,c("demographics","family","cognitive","
 
 features_list = read_csv("features_list.csv")
 df = matrix(nrow = 135, ncol = 5, dimnames = list(c(),c("model","feature","bucket","rank","original_rank")))
-df[1:13,"model"] = "lasso"
+df[1:13,"model"] = "Lasso\n(n=13)"
 df[1:13, c("feature")] = lasso_selected_features$feature[1:13]
 df[1:13, c("rank")] = 193 - lasso_selected_features$rank_lasso[1:13]
 df[1:13, c("original_rank")] = lasso_selected_features$rank_lasso[1:13]
 
-df[14:65,"model"] = "relieff"
+df[14:65,"model"] = "Relieff\n(n=52)"
 df[14:65, c("feature")] = relieff_selected_features$feature[1:52]
 df[14:65, c("rank")] = 193 - relieff_selected_features$rank_Relieff[1:52]
 df[14:65, c("original_rank")] = relieff_selected_features$rank_Relieff[1:52]
 
-df[66:110,"model"] = "random forest"
+df[66:110,"model"] = "Random Forest\n(n=45)"
 df[66:110, c("feature")] = rf_selected_features$feature[1:45]
 df[66:110, c("rank")] = 193 - rf_selected_features$rank_rf[1:45]
 df[66:110, c("original_rank")] = rf_selected_features$rank_rf[1:45]
 
-df[111:135,"model"] = "mean_rank_25"
+df[111:135,"model"] = "Mean Rank\n(n=25)"
 df[111:135, c("feature")] = all_features$feature[order(all_features[["mean_rank"]], decreasing = TRUE),drop=F][1:25]
 df[111:135, c("rank")] = seq(0,24)
 df[111:135, c("original_rank")] = all_features$mean_rank[order(all_features[["mean_rank"]], decreasing = TRUE),drop = F][1:25]
@@ -193,20 +193,27 @@ for (i in 1:135) {
   }
 }
 
+
+
 write.csv(df,"graph.csv",row.names = F)
 
 
 df = as.data.frame(df)
-df$rank_n = as.character(df$rank)
-df$percentage = as.numeric(df$rank_n)
-df$percentage[1:13] = 100- df$percentage[1:13]/13*100 
-df$percentage[14:65] = 100- df$percentage[14:65]/52*100
-df$percentage[66:110] = 100- df$percentage[66:110]/45*100
-df$percentage[111:135] = 100 -df$percentage[111:135]/25*100
-df$position_f = as.factor(df$percentage)
+levels(df$bucket)[levels(df$bucket)=="demographics"] = "Demographics"
+levels(df$bucket)[levels(df$bucket)=="environment"] = "Neighborhood"
+levels(df$bucket)[levels(df$bucket)=="family"] = "Family"
+levels(df$bucket)[levels(df$bucket)=="cognitive"] = "Cognitive"
+levels(df$bucket)[levels(df$bucket)=="clinical"] = "Clinical"
+
+df$model <- factor(df$model, levels = c("Lasso\n(n=13)","Random Forest\n(n=45)","Relieff\n(n=52)","Mean Rank\n(n=25)"))
 
 
-ggplot(data = df[df$rank_n %in% seq(1:13),] , mapping = aes(x = model, y = rank, fill = factor(bucket))) +
-  geom_bar(stat="identity", width = 0.7) + #,position="fill"
-  labs(x = "model", fill = "bucket") 
+ggplot(data = df , mapping = aes(x = model, fill = bucket)) +  
+  geom_bar( width = 0.7, position="fill") +
+  labs( y = "Percent of features in subset" , fill = "", x ="") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(axis.text=element_text(size=10, colour = "black"), 
+        legend.text=element_text(size=10)) +
+  scale_fill_manual(values=c("#F5B7B1","#ABEBC6","#AED6F1","#D2B4DE","#FAD7A0"))
+
 

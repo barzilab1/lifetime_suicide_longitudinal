@@ -22,11 +22,11 @@ boxplot(Environment_bucket_trimmed[,-1])
 environment_names = names(Environment_bucket)[-1]
 
 
-cat("\n\n###########################################")
-print("Environment")
+cat("\n\n###########################################Environment")
 
 #trimmed data
 x_total = merge(Y_bucket,Environment_bucket_trimmed)
+
 
 #original data
 # x_total = merge(Y_bucket,Environment_bucket)

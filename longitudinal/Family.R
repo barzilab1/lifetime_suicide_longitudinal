@@ -37,19 +37,19 @@ sum(Family_bucket$Parents_Sep_Divorce, na.rm = TRUE)/nrow(Family_bucket) #0.167
 
 family_names = names(Family_bucket)[-1]
 
-cat("\n\n###########################################")
-print("Family")
+cat("\n\n###########################################Family")
 
 #amelia data set
 x_total = merge(Y_bucket,Family_bucket_amelia)
 
-# #original data set
-# x_total = merge(Y_bucket,Family_bucket)
-# summary(x_total)
-# # remove rows with NA
-# x_total = x_total[!(rowSums(is.na(x_total)) >= 1),]
-
-
+if(no_amelia){
+  #original data set
+  x_total = merge(Y_bucket,Family_bucket)
+  # remove rows with NA
+  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
+}
+cat("\nnumber of rows: ", nrow(x_total))
+ 
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
