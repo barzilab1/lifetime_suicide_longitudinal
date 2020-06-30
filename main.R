@@ -9,7 +9,7 @@ library(readr)
 source(paste(getwd(),"longitudinal/Load_DB.R", sep = "/"))
 source(paste(getwd(),"functions_util.R", sep = "/"))
 
-no_amelia = T
+no_amelia = F
 
 source(paste(getwd(),"longitudinal/Demographics.R", sep = "/"))
 source(paste(getwd(),"longitudinal/Clinical.R", sep = "/"))

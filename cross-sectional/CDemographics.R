@@ -1,6 +1,3 @@
-library(PerformanceAnalytics)
-library(psych)
-
 
 summary(Demographics_bucket_cross[,-1]) 
 describe(Demographics_bucket_cross[,-1])
@@ -28,13 +25,26 @@ Demographics_bucket_cross[,c("sex","ethnicity")] =  Demographics_bucket_cross[,c
 
 
 summary(Demographics_bucket_cross[,-1]) 
-chart.Correlation(Demographics_bucket_cross[,-1])
 describe(Demographics_bucket_cross[,-1])
 boxplot(Demographics_bucket_cross[,-1])
 
+boxplot(Demographics_bucket_cross$tml007)
+# remove outlier in tml007 (last class in school)
+# TODO - is this the best why? should we only remove the extrime values? 
+Demographics_bucket_cross$tml007 = winsor(Demographics_bucket_cross$tml007,trim=0.005)
+boxplot(Demographics_bucket_cross$tml007)
 
-####TODO amelia - can we use edu1? 
+set.seed(24)
+amelia_fit <- amelia(Demographics_bucket_cross,m=1, idvars=c("bblid"), ords = c(2:5,7:8))
+summary(amelia_fit)
 
+Demographics_cross_amelia = amelia_fit$imputations[[1]]
+describe(Demographics_cross_amelia[,-1])
+summary(Demographics_cross_amelia)
+
+#remove edu
+Demographics_cross_amelia = subset(Demographics_cross_amelia, select= -c(edu1))
+Demographics_bucket_cross = subset(Demographics_bucket_cross, select= -c(edu1))
 
 
 #Frequency
@@ -43,71 +53,27 @@ sum(Demographics_bucket_cross$ethnicity)/nrow(Demographics_bucket_cross) #0.94
 sum(Demographics_bucket_cross$race2_White)/nrow(Demographics_bucket_cross) #0.57
 sum(Demographics_bucket_cross$race2_Black)/nrow(Demographics_bucket_cross) #0.32
 
-#######################################
-#Logistic regression 
-#######################################
+cat("\n\n###########################################Demographics_cross")
 
-x = merge(Y_bucket,Demographics_bucket_scaled)
-demo_b = Demographics_bucket_scaled[,-1]
+x_total = merge(Y_bucket_cross,Demographics_cross_amelia)
 
-resids = create_resids(demo_b)
+if(no_amelia){
+  #original data set
+  x_total = merge(Y_bucket_cross,Demographics_bucket_cross)
+  # remove rows with NA
+  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
+}
 
-# add residual columns to data frame
-x <- data.frame(x,resids)
+cat("\nnumber of rows: ", nrow(x_total))
 
-### Lifetime_Suicide_Attempt
-set.seed(42)
-mod_raw <- glm(Lifetime_Suicide_Attempt~as.matrix(demo_b),data=x,family="binomial")
-summary(mod_raw)
-get_logistic_results(mod_raw)[-1,]
-pR2(mod_raw)
-
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
-
-# Run with the opposit (multiply with -1) of all negative features
-temp_data = Demographics_bucket_cross
-
-#regressed regression data
-temp_data$race2_White = temp_data$race2_White * -1
-temp_data$race2_White = temp_data$race2_White + 1
-
-#scale 
-temp_data[,4:6] = scale(temp_data[,4:6]) 
-
-x = merge(Y_bucket,temp_data)
-demo_b = temp_data[,-1]
-
-resids = create_resids(demo_b)
-
-# add residual columns to data frame
-x <- data.frame(x,resids)
-
-#regressed regression
-mod_resid <- glm(Lifetime_Suicide_Attempt~resids,data=x,family="binomial")
-summary(mod_resid)
-get_logistic_results(mod_resid)[-1,]
-pR2(mod_resid)
-
+y = x_total[, c(2)]
+x = x_total[,-c(1:2)]
 
 ###########################################
-#Lasso and ridge with CV 
+# ridge with CV 
 ###########################################
-
-#original data
-x_total = merge(Y_bucket,Demographics_bucket_cross)
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-run_lasso(x,y,2)
 run_ridge(x,y)
 ##########################################
-# relieff (according to P_value)
+# Random Forest 
 ##########################################
-run_stir(x,y,2)
-
-
+run_tree_RF(x,y)

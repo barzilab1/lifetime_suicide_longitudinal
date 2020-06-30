@@ -10,7 +10,7 @@ Overall there are:
 * 33 current suicidal ideation  
 * 95 current depression
 
-* 11% missing data
+* 1% missing data
 
 The outcomes of features:
 

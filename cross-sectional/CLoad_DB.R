@@ -1,9 +1,10 @@
 
 #read the CSV. 
-PNC_over_11 = read_csv("PNC over 11 file for Elina with PNC FH.csv")
+PNC_over_11 = read_csv("Data/PNC over 11 file for Elina with PNC FH.csv")
 
-#################
-####build buckets 
+##################################
+#### buckets 
+##################################
 
 ###Y_bucket
 Y_bucket_cross = PNC_Core_Data_clinical[,c("bblid", "sui002")]
@@ -13,6 +14,8 @@ Y_bucket_cross = Y_bucket_cross[ !(Y_bucket_cross$bblid %in% Y_bucket$bblid),]
 #remove rows with no data
 Y_bucket_cross = Y_bucket_cross[ !is.na(Y_bucket_cross$sui002),]
 summary(Y_bucket_cross)
+table(Y_bucket_cross$sui002) #n=660, 1%
+
 
 ###EDU
 Edu_info_cross = merge(GOASSESS_Timeline[,1:2],GO1_grade_repeats)
@@ -29,7 +32,7 @@ Edu_info_combined_cross = aggregate(Edu_info_cross[,c("tml007","dem107","dem108"
 })
 
 #find contradictions between parent and child answer
-double_value_indexes = which(lapply(Edu_info_combined_cross$tml007, length) > 1 )
+double_value_indexes = which(lengths(Edu_info_combined_cross$tml007) > 1)
 #take the parent answer
 for ( i in double_value_indexes){
   Edu_info_combined_cross$tml007[i] = Edu_info_cross$tml007[Edu_info_cross$bblid == Edu_info_combined_cross$bblid[i] & Edu_info_cross$suffix == "MI"]
@@ -49,7 +52,7 @@ Environment_bucket_cross = merge(Y_bucket_cross[,c("bblid"), drop=FALSE], PNC_Co
 Trauma_bucket_cross = merge(Y_bucket_cross[,c("bblid"), drop=FALSE], PNC_Core_Data_environment[,-c(2:16)])  
 
 ###Demographics_bucket
-Demographics_bucket_cross = merge(Y_bucket_cross[,c("bblid"), drop=FALSE], PNC_Core_Data_demographics[,c(1,2,4:7)])
+Demographics_bucket_cross = merge(Y_bucket_cross[,c("bblid"), drop=FALSE], PNC_Core_Data_demographics[,c(1,2,4:8)])
 Demographics_bucket_cross = merge(Demographics_bucket_cross, Edu_info_combined_cross[,c("bblid","tml007")])
 
 ###Clinical_bucket
