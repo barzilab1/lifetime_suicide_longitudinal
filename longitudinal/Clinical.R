@@ -78,7 +78,7 @@ print("\n\n###########################################Clinical")
 #amelia data set
 x_total = merge(Y_bucket,Clinical_bucket_amelia)
 
-if(no_amelia){
+if(!imputation){
   #original data set
   x_total = merge(Y_bucket,Clinical_bucket)
   #remove empty tows
@@ -96,7 +96,7 @@ x = x_total[,-c(1:5)]
 #Lasso and ridge with CV
 ##########################################
 # run_lasso(x,y[,2])
-run_ridge(x,y[,2])
+# run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
@@ -106,7 +106,7 @@ run_ridge(x,y[,2])
 ##########################################
 # Random Forest 
 ##########################################
-run_tree_RF(x,y[,2])
+# run_tree_RF(x,y[,2])
 
 
 

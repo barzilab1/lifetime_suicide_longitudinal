@@ -9,7 +9,7 @@ library(readr)
 source(paste(getwd(),"cross-sectional/CLoad_DB.R", sep = "/"))
 source(paste(getwd(),"functions_util.R", sep = "/"))
 
-no_amelia = F
+imputation = T
 
 source(paste(getwd(),"cross-sectional/CDemographics.R", sep = "/"))
 source(paste(getwd(),"cross-sectional/CClinical.R", sep = "/"))

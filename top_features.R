@@ -67,7 +67,7 @@ x_total = merge(Y_bucket, combined_bucket_amelia)
 y = x_total[,3]
 x = x_total[,-c(1:5)]
 
-cl = makeCluster(number_cores, type="FORK")
+cl = makeCluster(N_CORES, type="FORK")
 registerDoParallel(cl)
 
 set.seed(42)

@@ -34,51 +34,43 @@ data_dim = dim(combined_bucket)
 number_NA/((data_dim[2]-1)*data_dim[1]) #0.0067
 cat("% of NA: ", number_NA/((data_dim[2]-1)*data_dim[1]),"\n" )
 
-set.seed(42)
-amelia_fit <- amelia(combined_bucket ,m=1,  idvars=c("bblid"), ords = c(16:19, 21:22,  #demographics
-                                                                        23:27, 29,     #family
-                                                                        30:37,         #trauma
-                                                                        38:168         #clinical
-                                                                        ))
-
-summary(amelia_fit)
-
-combined_bucket_amelia = amelia_fit$imputations[[1]]
-summary(combined_bucket_amelia[,-1])
+# set.seed(42)
+# amelia_fit <- amelia(combined_bucket ,m=1,  idvars=c("bblid"), ords = c(16:19, 21:22,  #demographics
+#                                                                         23:27, 29,     #family
+#                                                                         30:37,         #trauma
+#                                                                         38:168         #clinical
+#                                                                         ))
+# 
+# summary(amelia_fit)
+# 
+# combined_bucket_amelia = amelia_fit$imputations[[1]]
+# summary(combined_bucket_amelia[,-1])
 
 
 cat("\n\n###########################################Combined")
 
-x_total = merge(Y_bucket, combined_bucket_amelia)
+# x_total = merge(Y_bucket, combined_bucket_amelia)
 
-if(no_amelia){
-  #original data set
-  x_total = merge(Y_bucket,combined_bucket)
-  #remove rows with NA
-  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
-}
-
-cat("\nnumber of rows: ", nrow(x_total))
-
-
+x_total = merge(Y_bucket,combined_bucket)
 y = x_total[, c(2:5)]
 x = x_total[,-c(1:5)]
 
+run_algos(x,y[,2])
 
 ###########################################
 #Lasso and ridge with CV 
 ###########################################
-res_lasso = run_lasso(x,y[,2])
-run_ridge(x,y[,2])
+# res_lasso = run_lasso(x,y[,2])
+# run_ridge(x,y[,2])
 
 ##########################################
 # relieff (according to P_value)
 ##########################################
-res_Relieff = run_stir(x,y[,2])
+# res_Relieff = run_stir(x,y[,2])
 
 ##########################################
 # Random Forest 
 ##########################################
-res_rf = run_tree_RF(x,y[,2])
+# res_rf = run_tree_RF(x,y[,2])
 
 

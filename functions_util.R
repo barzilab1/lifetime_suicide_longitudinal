@@ -1,3 +1,17 @@
+library(glmnet)
+library(ROCR)
+library(data.table)
+library(caTools)
+library(doParallel)
+library(randomForest)
+
+##########################################
+# global variables of the below functions
+##########################################
+splits = 10000
+N_CORES <- detectCores()
+cat("\nno_cores " , N_CORES, "\n") 
+
 # bucket: a dataframe with all the features not including bblid
 create_resids = function(bucket) {
   
@@ -25,11 +39,7 @@ get_logistic_results = function (model){
   )
 }
 
-library(glmnet)
-library(ROCR)
-library(data.table)
-library(caTools)
-library(doParallel)
+
 
 #finds the closest point to (0,1) on the ROC curve
 opt.cut.roc = function(perf, pred){
@@ -54,13 +64,9 @@ opt.cut.roc = function(perf, pred){
   cut.ind = mapply(temp, perf@x.values, perf@y.values, pred@cutoffs)
 }
 
-
-# global variables of the below functions
-splits <- 10000
-# Calculate the number of cores
-number_cores <- detectCores()
-cat("\nno_cores " , number_cores, "\n") 
-
+##########################################
+# Lasso and Ridge
+##########################################
 
 # x: the features bucket
 # y: the outcome variable
@@ -78,7 +84,7 @@ run_lasso <- function(x,y) {
   lasso_80_sen = matrix(NA,splits,1)
   lasso_80_sen_spe = matrix(NA,splits,1)
   
-  cl = makeCluster(number_cores, type="FORK")
+  cl = makeCluster(N_CORES, type="FORK")
   registerDoParallel(cl)
   
   set.seed(42)
@@ -187,7 +193,10 @@ run_lasso <- function(x,y) {
   cat("\nSpecificity", colMeans(lasso_80_sen_spe, na.rm = T), sep="\t")
   cat("\n")
   
-  return(features)
+  return(list(features = features,
+              number_selected = ceiling(number_of_features[1]/splits),
+              auc = mean(lasso_measurements["auc",])
+              ))
 }
 
 
@@ -202,7 +211,7 @@ run_ridge <- function(x,y) {
   ridge_80_sen = matrix(NA,splits,1)
   ridge_80_sen_spe = matrix(NA,splits,1)
   
-  cl = makeCluster(number_cores, type="FORK")
+  cl = makeCluster(N_CORES, type="FORK")
   registerDoParallel(cl)
   
   set.seed(42)
@@ -299,7 +308,7 @@ run_ridge <- function(x,y) {
 run_stir <- function(x,y) {
   
   # create a parallel socket clusters
-  cl = makeCluster(number_cores, type="FORK")
+  cl = makeCluster(N_CORES, type="FORK")
   registerDoParallel(cl)
   
   features <- matrix(0,nrow = ncol(x), ncol = 1)
@@ -329,7 +338,7 @@ run_stir <- function(x,y) {
   features[names(res),] =  data.frame(res,row.names = names(res))$Freq
   #how many were selected 
   tot_number = sum(sapply(results_list, length))
-  #add one to the number of times more than 1 feature was selected 
+  #the number of times more than 1 feature was selected 
   tot_selected_model = sum(sapply(results_list, function(x){ length(x)>0}))
   
   
@@ -344,18 +353,17 @@ run_stir <- function(x,y) {
   cat("\nonly models that selected features: " , tot_number/tot_selected_model, sep = "\t")  
   cat("\n")
   
-  return(features)
+  return(list(features = features,
+              number_selected = ceiling(tot_number/splits)
+              ))
   
 }
 
 
 
 ##########################################
-# Random Forest and Decision Trees
+# Random Forest
 ##########################################
-
-library(randomForest)
-library(tree)
 
 run_tree_RF <- function(x,y) {
   
@@ -369,8 +377,6 @@ run_tree_RF <- function(x,y) {
   rf_measurements = matrix(NA,6,splits)
   rownames(rf_measurements) = c("auc","sen","spe","acc","ppv","npv")
   
-  tree_auc = 0
-  
   number_of_features = c(0,0)
   
   set.seed(42)
@@ -381,7 +387,7 @@ run_tree_RF <- function(x,y) {
     y_train <- y[splitz]
     x_test <- x[!splitz,]
     y_test <- y[!splitz]
-
+    
     #RF
     mode_rf <- randomForest(x=x_train,y=as.factor(y_train), importance = TRUE)
     res <- mode_rf$importance
@@ -413,32 +419,11 @@ run_tree_RF <- function(x,y) {
     rf_measurements["npv",i] = perf_npv_ppv@y.values[[1]][ind] 
     rf_measurements["ppv",i] = perf_npv_ppv@x.values[[1]][ind] 
     
-    # tree
-    # data_= cbind(y_train,x_train)
-    # mode_tree = tree(as.factor(y_train) ~ ., data_)
-    # used_features = summary(mode_tree)$used
-    # features_tree[as.character(used_features),1] = features_tree[as.character(used_features),1] + 1 
-    # #how many were selected 
-    # number_of_features[1] = number_of_features[1] + length(used_features) 
-    # #add one to the number of times more than 1 feature was selected 
-    # number_of_features[2] = ifelse( length(used_features) > 0 , number_of_features[2] +1, number_of_features[2] )
-    # 
-    # #calculate AUC
-    # y_predicted <- predict(mode_tree, newdata = x_test)[,2]
-    # pred <- prediction(y_predicted, y_test)
-    # tree_auc = tree_auc + performance(pred, measure = "auc")@y.values[[1]]
-    
   }
   
   cat("\n\nSelected Features According to Random Forest\n")
   features = features/splits
   
-  #MeanDecreaseAccuracy
-  # features_MeanDecreaseAccuracy = features[order(features[,1], decreasing = TRUE),1,drop=FALSE]
-  # print(features_MeanDecreaseAccuracy)
-  # plot(features_MeanDecreaseAccuracy ,xlab="" ,ylab="", xaxt="n" , main="MeanDecreaseAccuracy", pch = 19)
-  # axis(1, at=1:nrow(features), labels=rownames(features_MeanDecreaseAccuracy))
-  # cat("\n")
   
   #MeanDecreaseGini
   features_MeanDecreaseGini = features[order(features[,2], decreasing = TRUE),2,drop=FALSE]
@@ -453,21 +438,9 @@ run_tree_RF <- function(x,y) {
   print(apply(rf_measurements, 1, SD, na.rm = T))
   cat("\n")  
   
-  # cat("\n\nSelected Features According to Decision Trees \n")
-  # features_tree = features_tree[order(features_tree[,1], decreasing = TRUE),1,drop=FALSE]
-  # print(features_tree)
-  # plot(features_tree ,xlab="" ,ylab="", xaxt="n" , main="tree features", pch = 19)
-  # axis(1, at=1:nrow(features_tree), labels=rownames(features_tree))
-  # 
-  # # avg. number of selected features. 
-  # cat("\n Avg. selected features")
-  # cat("\n all models: " , number_of_features[1]/splits, sep = "\t")  
-  # cat("\n only models that selected features: " , number_of_features[1]/number_of_features[2], sep = "\t")  
-  # cat("\n")
-  # cat("\n tree AUC: ", tree_auc/splits, sep = "\t")
-  # cat("\n")
-  
-  return(features_MeanDecreaseGini)
+  return(list(features = features_MeanDecreaseGini,
+              auc = mean(rf_measurements["auc",])
+  ))
 }
 
 

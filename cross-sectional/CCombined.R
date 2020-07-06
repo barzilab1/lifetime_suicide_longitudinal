@@ -45,7 +45,7 @@ cat("\n\n###########################################Combined")
 
 x_total = merge(Y_bucket_cross, combined_bucket_amelia)
 
-if(no_amelia){
+if(!imputation){
   #original data set
   x_total = merge(Y_bucket_cross,combined_bucket)
   #remove rows with NA
