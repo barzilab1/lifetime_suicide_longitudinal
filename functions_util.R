@@ -39,29 +39,26 @@ get_logistic_results = function (model){
   )
 }
 
-
+opt.cut.roc_ = function(fpr, sen, cutoff){
+  d = (fpr - 0)^2 + (sen-1)^2
+  ind = which(d == min(d))
+  # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
+  if (length(ind) == 2 & ind[1]==1 & ind[2]==length(fpr)){
+    ind=ind[1]
+  }else if(length(ind) > 1 & ind[length(ind)] != length(fpr)){
+    #there are a few points with the same distance from (0,1), but it is not (0,0) (1,1)
+    ind = ind[length(ind)]
+  }else if(length(ind) > 1){
+    ind=ind[1]
+  }
+  
+  c(sensitivity = sen[[ind]], specificity = 1-fpr[[ind]], cutoff = cutoff[[ind]], ind = ind)
+}
 
 #finds the closest point to (0,1) on the ROC curve
 opt.cut.roc = function(perf, pred){
   
-  temp = function(x, y, p){
-    d = (x - 0)^2 + (y-1)^2
-    ind = which(d == min(d))
-    # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
-    if (length(ind) == 2 & ind[1]==1 & ind[2]==length(x)){
-      ind=ind[1]
-    }else if(length(ind) > 1 & ind[length(ind)] != length(x)){
-      #there are a few points with the same distance from (0,1), but it is not (0,0) (1,1)
-      ind = ind[length(ind)]
-    }else if(length(ind) > 1){
-      ind=ind[1]
-    }
-    
-    c(sensitivity = y[[ind]], specificity = 1-x[[ind]], cutoff = p[[ind]], ind = ind)
-  }
-  
-  
-  cut.ind = mapply(temp, perf@x.values, perf@y.values, pred@cutoffs)
+  cut.ind = mapply(opt.cut.roc_, perf@x.values, perf@y.values, pred@cutoffs)
 }
 
 ##########################################
@@ -114,7 +111,7 @@ run_lasso <- function(x,y) {
     number_of_features[1] = number_of_features[1] + (length (which(coefs != 0 ) ) -1)
     #add one to the number of times more than 1 feature was selected 
     number_of_features[2] = ifelse( length(which(coefs != 0 ) ) > 1 , number_of_features[2] +1, number_of_features[2] )
-    
+    #TODO maybe: save also the coef (b) itself. at the end of 10k runs, get the 95% CI and check that 0 is not included 
     
     y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(x_test),type ="response")
     pred <- prediction(y_predicted, y_test)
