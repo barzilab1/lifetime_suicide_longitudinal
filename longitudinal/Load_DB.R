@@ -14,6 +14,7 @@ Sips_Extras = read_csv("Data/sips_extras.csv")
 
 #################
 ####build buckets 
+#################
 
 ###Y_bucket
 Y_bucket = PHQ_Data[,c("bblid","Current_Suicidal_Ideation","Lifetime_Suicide_Attempt" , "Depression_mod_above_at_phq", "PHQ9_Sum")]
@@ -29,7 +30,7 @@ Edu_info = merge(GOASSESS_Timeline[,1:2],GO1_grade_repeats)
 t = do.call('rbind', strsplit(as.character(Edu_info$redcapid),'_',fixed=TRUE))
 Edu_info$bblid = t[,1]
 Edu_info$suffix = t[,2]
-Edu_info = merge(Y_bucket[,c("bblid")],Edu_info)
+Edu_info = merge(Y_bucket[,"bblid", drop = F],Edu_info)
 
 #combine rows with the same bblid
 Edu_info_combined = aggregate(Edu_info[,c("tml007","dem107","dem108","dem109")], list(bblid=Edu_info$bblid), function(x) {
@@ -54,19 +55,24 @@ Family_bucket = PHQ_Data[!is.na(PHQ_Data$Current_Suicidal_Ideation),
                          c("bblid","Ran_psychosis_FH","Ran_depression_FH","Ran_bipolar_or_lithium_FH","Ran_Sui_attempt_or_death_FH","Ran_substance_FH")] 
 Family_bucket = merge(Family_bucket, PNC_Core_Data_demographics[,c(1,9:11)])
 Family_bucket = merge(Family_bucket, SepDivorce)
+Family_bucket = source(paste(getwd(),"longitudinal/Family.R", sep = "/"))$value
+
 
 ###Environment_bucket
 Environment_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,c(1:16)])
+Environment_bucket_trimmed = source(paste(getwd(),"longitudinal/Environmental.R", sep = "/"))$value
 
 ###Trauma_bucket
 Trauma_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_environment[,-c(2:16)])  
+Trauma_bucket = source(paste(getwd(),"longitudinal/Trauma.R", sep = "/"))$value
 #age above 11- check if child or parent did the assesment 
-Trauma_bucket = merge(Trauma_bucket, PNC_Core_Data[,c("bblid","above11")])
+# Trauma_bucket = merge(Trauma_bucket, PNC_Core_Data[,c("bblid","above11")])
 
 ###Demographics_bucket
 Demographics_bucket = merge(PHQ_Data[,c("bblid", "goassessPhqDurMonths")], PNC_Core_Data_demographics[,c(1,2,4:8)])
 Demographics_bucket = merge(Y_bucket[,c("bblid")], Demographics_bucket)
 Demographics_bucket = merge(Demographics_bucket, Edu_info_combined[,c("bblid","tml007")])
+Demographics_bucket = source(paste(getwd(),"longitudinal/Demographics.R", sep = "/"))$value
 
 ###Clinical_bucket
 Clinical_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_clinical)
@@ -74,27 +80,28 @@ Clinical_bucket = merge(Sips_Extras, Clinical_bucket)
 #add if the child skipped a class 
 Clinical_bucket = merge(Clinical_bucket, Edu_info_combined[,c(1,3)])
 #age above 11- check if child or parent did the assesment 
-Clinical_bucket = merge(Clinical_bucket, PNC_Core_Data[,c("bblid","above11")])
+# Clinical_bucket = merge(Clinical_bucket, PNC_Core_Data[,c("bblid","above11")])
 Substance_bucket = merge(Y_bucket[,c("bblid")], GO1_Substance_Use[,c(1,76:89)])
+Clinical_bucket = source(paste(getwd(),"longitudinal/Clinical.R", sep = "/"))$value
 
+###Cognitive_bucket
 Cognitive_raw_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive_ALTERNATIVE)
 Cognitive_bucket = merge(Y_bucket[,c("bblid")], PNC_Core_Data_cognitive)
+Cognitive_bucket = source(paste(getwd(),"longitudinal/Cognitive.R", sep = "/"))$value
 
 
-#TODO calculate cor between Y features 
+
+#get features names from each bucket
+buckets_features_names = list(
+  family       = colnames(Family_bucket)[-1],
+  environment  = colnames(Environment_bucket)[-1],
+  trauma       = colnames(Trauma_bucket)[-1],
+  demographics = colnames(Demographics_bucket)[-1],
+  clinical     = colnames(Clinical_bucket)[-1],
+  cognitive    = colnames(Cognitive_bucket)[-1]
+)
+
+buckets_features_names[["all"]] =  as.vector(unlist(buckets_features_names))
 
 
-#check na% - need to check with cognetive combined!
-# Full_Data= Reduce(function(x, y) merge(x, y, by="bblid"), list(PHQ_Data, 
-#                                                                PNC_Core_Data_environment, 
-#                                                                PNC_Core_Data_cognitive, 
-#                                                                PNC_Core_Data_cognitive_ALTERNATIVE,
-#                                                                PNC_Core_Data_clinical,
-#                                                                PNC_Core_Data_demographics,
-#                                                                Substance_bucket,
-#                                                                SepDivorce))
-# 
-# number_NA = sum(is.na(Full_Data))
-# number_NA_col = colSums(is.na(Full_Data))
-# data_dim = dim(Full_Data) 
-# number_NA/(data_dim[1]*data_dim[2]) #0.11
+

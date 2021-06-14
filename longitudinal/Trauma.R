@@ -11,22 +11,13 @@ Trauma_bucket$ptd0045[Trauma_bucket$ptd005 == 1] = 1
 Trauma_bucket = Trauma_bucket[,! names(Trauma_bucket) %in% c("ptd004","ptd005")]
 
 summary(Trauma_bucket)
-# chart.Correlation(Trauma_bucket[,-1])
 boxplot(Trauma_bucket[,-1])
+describe(Trauma_bucket[,-1])
 
 #remove empty rows
 length(which(rowSums(is.na(Trauma_bucket)) >= 8)) #5
 Trauma_bucket = Trauma_bucket[!(rowSums(is.na(Trauma_bucket)) >= 8),]
 
-
-set.seed(24)
-amelia_fit <- amelia(Trauma_bucket,m=1, idvars=c("bblid","above11"), ords = c(2:8,10))
-
-summary(amelia_fit)
-
-Trauma_bucket_amelia = amelia_fit$imputations[[1]]
-describe(Trauma_bucket_amelia)
-summary(Trauma_bucket_amelia)
 #no need to scale as all features are binary
 
 #Frequency
@@ -40,130 +31,4 @@ sum(Trauma_bucket$ptd008, na.rm = TRUE)/nrow(Y_bucket) #0.101
 sum(Trauma_bucket$ptd009, na.rm = TRUE)/nrow(Y_bucket) #0.118
 
 
-trauma_names = names(Trauma_bucket)[!(names(Trauma_bucket) %in% c("bblid", "above11"))]
-
-cat("\n\n###########################################Trauma")
-
-#amelia data set
-x_total = merge(Y_bucket,Trauma_bucket_amelia)
-
-if(!imputation){
-  #original data set
-  x_total = merge(Y_bucket,Trauma_bucket)
-  #remove rows with NA
-  x_total = x_total[(rowSums(is.na(x_total)) == 0),]
-}
-
-cat("\nnumber of rows: ", nrow(x_total))
-
-x_total = x_total[,! names(x_total) %in% c("above11")]
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-###########################################
-#Lasso and ridge with CV
-###########################################
-# run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
-
-##########################################
-# relieff (according to P_value)
-##########################################
-# run_stir(x,y[,2])
-
-##########################################
-# Random Forest 
-##########################################
-# run_tree_RF(x,y[,2])
-
-###########################################
-#Check Trauma weird results 
-###########################################
-#make sure Demographics bucket is ready 
-
-# #1. calculate AUC for Demographics 
-# x = merge(Y_bucket,Demographics_bucket)
-# demo_b = Demographics_bucket[,-1]
-# 
-# resids = create_resids(demo_b)
-# x <- data.frame(x,resids)
-# 
-# set.seed(42)
-# mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black,data=x,family="binomial")
-# summary(mod_raw)
-# y_predicted <- predict(mod_raw, type="response")
-# pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
-# #calculate AUC
-# performance(pred, measure = "auc")@y.values[[1]] #0.6518222
-# 
-# 
-# #resid
-# mod_resid <- glm(Lifetime_Suicide_Attempt~goassessPhqDurMonths_res + sex_res + ethnicity_res + tml007_res +
-#                   age_res + race2_White_res + race2_Black_res ,data=x,family="binomial")
-# summary(mod_resid)
-# y_predicted <- predict(mod_resid, type="response")
-# pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
-# #calculate AUC
-# performance(pred, measure = "auc")@y.values[[1]] #0.6518222
-# 
-# 
-# #2. add all trauma
-# x = merge(x,Trauma_bucket_amelia)
-# 
-# mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black+ 
-#                  ptd001+ptd002+ptd003+ptd0045+ptd006+ptd007+ptd008+ptd009,data=x,family="binomial")
-# summary(mod_raw)
-# 
-# y_predicted <- predict(mod_raw, type="response")
-# pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
-# 
-# #calculate AUC
-# performance(pred, measure = "auc")@y.values[[1]] #0.6839159
-# 
-# 
-# 
-# #3. add each feature separately and compare to Lifetime_Suicide_Attempt
-# 
-# names_trauma = colnames(Trauma_bucket[,-1])[-8]
-# 
-# for(name in names_trauma){
-# 
-#   mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black+ 
-#                  x[,name] ,data=x,family="binomial")
-#   summary(mod_raw)
-#   
-#   y_predicted <- predict(mod_raw, type="response")
-#   pred <- prediction(y_predicted, x$Lifetime_Suicide_Attempt)
-#   
-#   auc = round(performance(pred, measure = "auc")@y.values[[1]], digits = 3) 
-#   cor = round(polychoric(data.frame(x[,name],x$Lifetime_Suicide_Attempt))$rho[2],digits = 5)
-#   
-#   cat("\n AUC Demographics + ", name, ": ", auc, " polychoric(Lifetime_Suicide_Attempt,",name,")$rho: " ,cor)
-# }
-# 
-# #3. add each feature separately and compare to Lifetime_Suicide_Attempt
-# 
-# names_trauma = colnames(Trauma_bucket[,-1])[-8]
-# x_above11 = x[x$above11==1,]
-# 
-# for(name in names_trauma){
-#   
-#   mod_raw <- glm(Lifetime_Suicide_Attempt~sex+ ethnicity + tml007 + age + goassessPhqDurMonths +race2_White + race2_Black+ 
-#                    x_above11[,name] ,data=x_above11,family="binomial")
-#   summary(mod_raw)
-#   
-#   y_predicted <- predict(mod_raw, type="response")
-#   pred <- prediction(y_predicted, x_above11$Lifetime_Suicide_Attempt)
-#   
-#   auc = round(performance(pred, measure = "auc")@y.values[[1]], digits = 3) 
-#   cor = round(polychoric(data.frame(x_above11[,name],x_above11$Lifetime_Suicide_Attempt))$rho[2],digits = 5)
-#   
-#   cat("\n AUC Demographics + ", name, ": ", auc, " polychoric(Lifetime_Suicide_Attempt,",name,")$rho: " ,cor)
-# }
-# 
-# # for ptd002 in polychoric:
-# # Warning message:
-# # In matpLower(x, nvar, gminx, gmaxx, gminy, gmaxy) :
-# # 1 cells were adjusted for 0 values using the correction for continuity. Examine your data carefully. 
-# 
+Trauma_bucket

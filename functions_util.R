@@ -1,8 +1,8 @@
+library(doParallel)
+library(caTools)
 library(glmnet)
 library(ROCR)
-library(data.table)
-library(caTools)
-library(doParallel)
+library(stir)
 library(randomForest)
 
 ##########################################
@@ -12,34 +12,92 @@ splits = 10000
 N_CORES <- detectCores()
 cat("\nno_cores " , N_CORES, "\n") 
 
-# bucket: a dataframe with all the features not including bblid
-create_resids = function(bucket) {
+# x: a dataframe with all the features not including bblid
+run_rf_ridge = function(x,y,features_names){
   
-  # make object to receive data. 
-  resids <- matrix(NA,nrow(bucket),ncol(bucket))
+  ridge_auc = list()
+  rf_auc = list()
   
-  # loop through each column, predict it with all other variables, and take residuals. except bblid
-  for (j in 1:ncol(bucket)) {
-    mod <- lm(bucket[,j]~as.matrix(bucket[,-j]),data=bucket,na.action=na.exclude)
-    resids[,j] <- scale(residuals(mod,na.action=na.exclude))
+  cl = makeCluster(N_CORES, type="FORK")
+  registerDoParallel(cl)
+  
+  set.seed(42)
+  for (i in 1:splits) {
+    
+    #split the data splits times to 75% training and 25% test
+    splitz = sample.split(y, .75)
+    x_train <- x[splitz,]
+    y_train <- y[splitz]
+    x_test <- x[!splitz,]
+    y_test <- y[!splitz]
+    
+    #' (1) imputation 
+    if(imputation){
+      
+      x_train = missForest(x_train)$ximp
+      x_test = missForest(x_test)$ximp
+      
+    }else{
+      #remove rows with NA
+      index_train = which(rowSums(is.na(x_train)) == 0)
+      x_train = x_train[index_train,]
+      y_train = y_train[index_train]
+      
+      index_test = which(rowSums(is.na(x_test)) == 0)
+      x_test = x_test[index_test,]
+      y_test = y_test[index_test]
+      
+    }
+    
+    for(feature_set in names(features_names)){
+      
+      #get data according to bucket
+      train_data = x_train[,features_names[[feature_set]]]
+      test_data = x_test[,features_names[[feature_set]]]
+      
+      # cat("\nNA in train_data", which(is.na(train_data)), "colNumber", ncol(train_data), "rowNumber", nrow(train_data))
+      # cat("\nNA in test_data", which(is.na(test_data)), "colNumber", ncol(test_data), "rowNumber", nrow(test_data), "\n")
+      
+      
+      ###ridge
+      mod <- cv.glmnet(x=as.matrix(train_data),y=y_train,alpha=0,family="binomial", parallel = T)
+      opt_lambda <- mod$lambda.min
+      mod <- mod$glmnet.fit
+      y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(test_data),type ="response")
+      pred <- prediction(y_predicted, y_test)
+      
+      ridge_auc[[feature_set]][i] =  performance(pred, measure = "auc")@y.values[[1]]
+      
+      ###rf
+      mode_rf <- randomForest(x=train_data,y=as.factor(y_train))
+      y_predicted <- predict(mode_rf, newdata = test_data, type ="prob")[,2]
+      pred <- prediction(y_predicted, y_test)
+      
+      rf_auc[[feature_set]][i] =  performance(pred, measure = "auc")@y.values[[1]]
+      
+    }
+    
   }
   
-  # append "res" to column names
-  colnames(resids) <- paste(colnames(bucket),"_res",sep="")
-  resids
-}
+  stopCluster(cl)
+  
+  for(feature_set in names(ridge_auc)){
+    
+    cat("\n##################################\n")
+    cat(feature_set)
+    cat("\n##################################\n")
+    
+    cat("ridge auc: ",mean(ridge_auc[[feature_set]]))
+    cat("\nrf auc: ",mean(ridge_auc[[feature_set]]),"\n")
+    
+  }
+  
+  return(list("ridge_auc" = ridge_auc,"rf_auc" = rf_auc))
 
-get_logistic_results = function (model){
-  data.frame(
-      Estimate    = round(       summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"] , digits = 3),
-      EffectSize  = round(exp(   summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Estimate"]), digits = 3),
-      CI_2_5      = round(exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   1     ]  ), digits = 3),
-      CI_97_5     = round(exp(confint.default(model)[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05,   2     ]  ), digits = 3),
-      Pvalue      = round(       summary(model)$coef[ summary(model)$coef[,"Pr(>|z|)"] <= 0.05, "Pr(>|z|)"] , digits = 3) 
-  )
 }
 
 opt.cut.roc_ = function(fpr, sen, cutoff){
+  
   d = (fpr - 0)^2 + (sen-1)^2
   ind = which(d == min(d))
   # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
@@ -56,9 +114,9 @@ opt.cut.roc_ = function(fpr, sen, cutoff){
 }
 
 #finds the closest point to (0,1) on the ROC curve
-opt.cut.roc = function(perf, pred){
+opt.cut.roc = function(perf){
   
-  cut.ind = mapply(opt.cut.roc_, perf@x.values, perf@y.values, pred@cutoffs)
+  cut.ind = opt.cut.roc_(perf@x.values[[1]], perf@y.values[[1]], perf@alpha.values[[1]])
 }
 
 ##########################################
@@ -123,10 +181,10 @@ run_lasso <- function(x,y) {
     perf <- performance(pred,"tpr","fpr")
     
     #find closest point to (0,1)
-    results = opt.cut.roc(perf, pred)
-    lasso_measurements["sen",i] = results["sensitivity",1]
-    lasso_measurements["spe",i] = results["specificity",1]
-    ind = results["ind",1]
+    results = opt.cut.roc(perf)
+    lasso_measurements["sen",i] = results["sensitivity"]
+    lasso_measurements["spe",i] = results["specificity"]
+    ind = results["ind"]
     
     #calculate acc
     acc = performance(pred, "acc" )
@@ -139,17 +197,17 @@ run_lasso <- function(x,y) {
     
     
     #the 80% sensitivity 
-    dt = data.table(sen = perf@y.values[[1]], spe = 1-perf@x.values[[1]])
-    setattr(dt, "sorted", "sen")
-    index.sen = dt[.(0.8), roll = "nearest", which = TRUE]
-    if (length(index.sen) > 1 ){
+    d = abs((perf@y.values[[1]] - 0.8))
+    ind = which(d == min(d))
+    if(length(ind)>1){
       #take the index with the biggest specificity 
-      index.sen = index.sen[1]
-    }
-    lasso_80_sen[i,1] = dt$sen[index.sen]
-    lasso_80_sen_spe[i,1] = dt$spe[index.sen]
+      ind=ind[1]
+    } 
+
+    lasso_80_sen[i,1] = perf@y.values[[1]][ind]
+    lasso_80_sen_spe[i,1] = 1 - perf@x.values[[1]][ind]
     
-    #in case the edges were selected (sen=1, spe=0), replace them as alwayes prefer tests with high spec
+    #in case the edges were selected (sen=1, spe=0), replace them as always prefer tests with high spec
     if(lasso_80_sen[i,1] ==1 & lasso_80_sen_spe[i,1] ==0){
       lasso_80_sen[i,1] = 0 
       lasso_80_sen_spe[i,1] = 1
@@ -239,10 +297,10 @@ run_ridge <- function(x,y) {
     perf <- performance(pred,"tpr","fpr")
     
     #find closest point to (0,1)
-    results = opt.cut.roc(perf, pred)
-    ridge_measurements["sen",i] = results["sensitivity",1]
-    ridge_measurements["spe",i] = results["specificity",1]
-    ind = results["ind",1]
+    results = opt.cut.roc(perf)
+    ridge_measurements["sen",i] = results["sensitivity"]
+    ridge_measurements["spe",i] = results["specificity"]
+    ind = results["ind"]
     
     #calculate acc
     acc = performance(pred, "acc" )
@@ -255,17 +313,17 @@ run_ridge <- function(x,y) {
     
     
     #the 80% sensitivity 
-    dt = data.table(sen = perf@y.values[[1]], spe = 1-perf@x.values[[1]])
-    setattr(dt, "sorted", "sen")
-    index.sen = dt[.(0.8), roll = "nearest", which = TRUE]
-    if (length(index.sen) > 1 ){
+    d = abs((perf@y.values[[1]] - 0.8))
+    ind = which(d == min(d))
+    if(length(ind)>1){
       #take the index with the biggest specificity 
-      index.sen = index.sen[1]
-    }
-    ridge_80_sen[i,1] = dt$sen[index.sen]
-    ridge_80_sen_spe[i,1] = dt$spe[index.sen]
+      ind=ind[1]
+    } 
     
-    #in case the edges were selected (sen=1, spe=0), replace them as alwayes prefer tests with high spe
+    ridge_80_sen[i,1] = perf@y.values[[1]][ind]
+    ridge_80_sen_spe[i,1] = 1 - perf@x.values[[1]][ind]
+    
+    #in case the edges were selected (sen=1, spe=0), replace them as always prefer tests with high spe
     if(ridge_80_sen[i,1] ==1 & ridge_80_sen_spe[i,1] == 0){
       ridge_80_sen[i,1] = 0 
       ridge_80_sen_spe[i,1] = 1
@@ -291,6 +349,8 @@ run_ridge <- function(x,y) {
   cat("\nSensitivity", colMeans(ridge_80_sen, na.rm = T), sep = "\t" )
   cat("\nSpecificity", colMeans(ridge_80_sen_spe, na.rm = T), sep = "\t")
   cat("\n")
+  
+  ridge_measurements["auc",]
 }
 
 
@@ -334,7 +394,7 @@ run_stir <- function(x,y) {
   res = table(unlist(results_list))
   features[names(res),] =  data.frame(res,row.names = names(res))$Freq
   #how many were selected 
-  tot_number = sum(sapply(results_list, length))
+  tot_number = sum(res)
   #the number of times more than 1 feature was selected 
   tot_selected_model = sum(sapply(results_list, function(x){ length(x)>0}))
   
@@ -362,14 +422,11 @@ run_stir <- function(x,y) {
 # Random Forest
 ##########################################
 
-run_tree_RF <- function(x,y) {
+run_RF <- function(x,y) {
   
   features <- matrix(0,nrow = ncol(x), ncol = 2)
   rownames(features) <- paste(colnames(x))
   colnames(features) <- c("MeanDecreaseAccuracy","MeanDecreaseGini")
-  
-  features_tree <- matrix(0,nrow = ncol(x), ncol = 1)
-  rownames(features_tree) <- paste(colnames(x))
   
   rf_measurements = matrix(NA,6,splits)
   rownames(rf_measurements) = c("auc","sen","spe","acc","ppv","npv")
@@ -388,9 +445,8 @@ run_tree_RF <- function(x,y) {
     #RF
     mode_rf <- randomForest(x=x_train,y=as.factor(y_train), importance = TRUE)
     res <- mode_rf$importance
-    index = ncol(res) -1
-    features = features + res[match(rownames(features),rownames(res)),index:(index+1)]
-    
+    features = features + res[match(rownames(features),rownames(res)),c("MeanDecreaseAccuracy","MeanDecreaseGini")]
+
     #calculate measurements
     y_predicted <- predict(mode_rf, newdata = x_test, type ="prob")[,2]
     pred <- prediction(y_predicted, y_test)
@@ -402,10 +458,10 @@ run_tree_RF <- function(x,y) {
     perf <- performance(pred,"tpr","fpr")
     
     #find closest point to (0,1)
-    results = opt.cut.roc(perf, pred)
-    rf_measurements["sen",i] = results["sensitivity",1]
-    rf_measurements["spe",i] = results["specificity",1]
-    ind = results["ind",1]
+    results = opt.cut.roc(perf)
+    rf_measurements["sen",i] = results["sensitivity"]
+    rf_measurements["spe",i] = results["specificity"]
+    ind = results["ind"]
     
     #calculate acc
     acc = performance(pred, "acc" )
@@ -436,21 +492,58 @@ run_tree_RF <- function(x,y) {
   cat("\n")  
   
   return(list(features = features_MeanDecreaseGini,
-              auc = mean(rf_measurements["auc",])
-  ))
+              auc = rf_measurements["auc",]
+        ))
 }
 
 
+get_top_features = function(res_lasso,res_Relieff,res_rf){
+  res_lasso_updated = data.frame(score_lasso = res_lasso$features, rank_lasso = rank(res_lasso$features, ties.method= "max"))
+  res_lasso_updated$feature = rownames(res_lasso_updated)
+  res_lasso_updated[res_lasso_updated$score_lasso == 0, "rank_lasso"] = 0
+  
+  res_Relieff_updated = data.frame(score_Relieff = res_Relieff$features, rank_Relieff = rank(res_Relieff$features, ties.method= "max"))
+  res_Relieff_updated$feature = rownames(res_Relieff_updated)
+  res_Relieff_updated[res_Relieff_updated$score_Relieff == 0, "rank_Relieff"] = 0
+  
+  res_rf_updated = data.frame(score_rf = res_rf$features[,1], rank_rf = rank(res_rf$features[,1], ties.method= "max"))
+  res_rf_updated$feature = rownames(res_rf_updated)
+  
+  all_features = merge(res_lasso_updated,res_Relieff_updated)
+  all_features = merge(all_features,res_rf_updated)
+  
+  all_features$mean_rank = round(rowMeans(all_features[,c("rank_lasso", "rank_Relieff", "rank_rf")]), digits = 3)
+  
+  write.csv(all_features, "all_selected_features.csv")
+  return(all_features)
+}
+
+find_biggest_gap = function(values){
+  ind = 0
+  diff = 0
+  
+  for (i in 1:(length(values)-1)){
+    current_diff = (values[i] - values[i+1])
+    if(current_diff > diff){
+      diff = current_diff
+      ind = i
+    }
+  }
+  print(paste0("rf diff:", names(diff)))
+  print(paste0("rf ind:", ind))
+  ind
+}
+
 # y: the main variable to check significance with 
-#data:  a matrix of feature to compre with
-check_significance = function(y,data){
+#data:  a matrix of feature to compare with
+check_significance = function(y,data,main_text){
   
   results = matrix(F, nrow = 1 ,ncol = length(data))
   colnames(results) = names(data)
   
   for (i in 1:length(data)) {
     difference = as.matrix(y - data[,i])
-    hist(difference, main = names(data)[i])
+    # hist(difference, main = paste0(names(data)[i],"_" ,main_text))
     interval = mean(difference) + c(-2,2)*sd(difference)
     results[i] = ifelse( interval[1] <= 0 & 0 <= interval[2], F, T)
   }

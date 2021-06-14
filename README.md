@@ -36,9 +36,11 @@ cross-sectional:
 
 #### How to Run:
 1. Make sure all the data-sets are under the folder "Data"
-2. To run locally, run main.R
-3. To run on PMACS, run main.sh. the output will be in main.Rout and Rplots.pdf
-4. Each bucket can be run as separate script after "load_DB.R" and "function_util.R" were run, except for the combined bucket  
+2. download stir: https://github.com/insilico/stir
+3. To run locally, run main.R
+4. To run on PMACS, run main.sh. the output will be in main.Rout and Rplots.pdf
+
+
   
 ---
 ####  Questions:

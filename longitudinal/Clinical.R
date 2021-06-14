@@ -1,16 +1,16 @@
 
 summary(Clinical_bucket[,-1])
-# describe(Clinical_bucket[,-1])
-
-# 3 rows have only the summary variables [medical vars that might be assessed by a different doc]  
-t = Clinical_bucket[,c(2:118)]
-nrow(t[rowSums(is.na(t)) == 117,])
-# 4 rows missing all the summary variables [gaf- score between 0-100 (good), 50 bad, relates to the goassess]
-t = Clinical_bucket[,c(120:127)]
-nrow(t[rowSums(is.na(t)) == 8,])
 
 #remove ptd009.x=trauma
-Clinical_bucket = Clinical_bucket[,! names(Clinical_bucket) %in% c("ptd009.x")]
+Clinical_bucket = Clinical_bucket[,-which(colnames(Clinical_bucket) == "ptd009.x")]
+
+# 3 rows have only the summary variables [medical vars that might be assessed by a different doc]  
+t = Clinical_bucket[,c(2:117)]
+nrow(t[rowSums(is.na(t)) == 116,])
+# 4 rows missing all the summary variables [gaf- score between 0-100 (good), 50 bad, relates to the goassess]
+t = Clinical_bucket[,c(119:126)]
+nrow(t[rowSums(is.na(t)) == 8,])
+
 
 #how many repeat a grade
 sum(Clinical_bucket$dem107, na.rm = TRUE) #82
@@ -26,8 +26,8 @@ summary(Substance_bucket)
 t = GO1_Substance_Use[,c("subs_smry_sub_alc","subs_smry_sub_mar")]
 t$remaining_sum = GO1_Substance_Use$subs_smry_sub_tot - rowSums(GO1_Substance_Use[,c(78:86)],na.rm = TRUE)
 t$subs_smry_sub_mar[is.na(t$subs_smry_sub_mar)] = 0
-lm(data=t[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc)),], remaining_sum ~ subs_smry_sub_mar )
-which(t$subs_smry_sub_mar[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))] != t$remaining_sum[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))])
+# lm(data=t[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc)),], remaining_sum ~ subs_smry_sub_mar )
+# which(t$subs_smry_sub_mar[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))] != t$remaining_sum[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))])
 
 #check frequser of marichuana of the entire dataset - ok. 
 table(GO1_Substance_Use$MarUse, GO1_Substance_Use$subs_smry_sub_mar)
@@ -49,66 +49,16 @@ Substance_bucket$AlcUse = ifelse(Substance_bucket$AlcUse == "nonuser" , 0 ,1)
 #take only substance with more 1% frequency  
 Substance_bucket = Substance_bucket[,(apply(Substance_bucket, 2, sum, na.rm=TRUE) >=9)]
 
-
 summary(Substance_bucket)
 
-#merge the tables, take all kids from clinical
-Clinical_bucket = merge(x=Clinical_bucket,y=Substance_bucket,all.x = TRUE)
 
-summary(Clinical_bucket)
+#merge the tables, take all kids from clinical
+Clinical_bucket_full = merge(x=Clinical_bucket,y=Substance_bucket,all.x = TRUE)
+
+summary(Clinical_bucket_full)
 
 #get cor including Y
 # write.csv(cor_auto(merge(Clinical_bucket,Y_bucket)) ,file = "cor_clinic.csv")
 
+Clinical_bucket_full
 
-
-set.seed(42)
-amelia_fit <- amelia(Clinical_bucket ,m=1,  idvars=c("bblid", "above11"), ords = c(2:127,129:133))
-
-summary(amelia_fit)
-
-Clinical_bucket_amelia = amelia_fit$imputations[[1]]
-describe(Clinical_bucket_amelia[,-1])
-summary(Clinical_bucket_amelia[,-1])
-
-clinical_names = names(Clinical_bucket)[!(names(Clinical_bucket) %in% c("bblid", "above11"))]
-
-print("\n\n###########################################Clinical")
-
-#amelia data set
-x_total = merge(Y_bucket,Clinical_bucket_amelia)
-
-if(!imputation){
-  #original data set
-  x_total = merge(Y_bucket,Clinical_bucket)
-  #remove empty tows
-  x_total = x_total[(rowSums(is.na(x_total))== 0),]
-}
-
-cat("\nnumber of rows: ", nrow(x_total))
-
-x_total = x_total[,! names(x_total) %in% c("above11")]
-
-y = x_total[, c(2:5)]
-x = x_total[,-c(1:5)]
-
-###########################################
-#Lasso and ridge with CV
-##########################################
-# run_lasso(x,y[,2])
-# run_ridge(x,y[,2])
-
-##########################################
-# relieff (according to P_value)
-##########################################
-# run_stir(x,y[,2])
-
-##########################################
-# Random Forest 
-##########################################
-# run_tree_RF(x,y[,2])
-
-
-
-
- 
