@@ -33,7 +33,7 @@ for (i in c(5,10,15,20,25,30,35)){
   
 }
   
-
+write.csv(df,"output/features_list.csv",row.names = F)
 
 
 
@@ -70,7 +70,7 @@ for (i in 1:nrow(df)) {
 
 
 
-write.csv(df,"graph_data.csv",row.names = F)
+write.csv(df,"output/graph_data.csv",row.names = F)
 
 
 df = as.data.frame(df)

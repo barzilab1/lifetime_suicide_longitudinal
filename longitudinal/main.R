@@ -8,12 +8,17 @@ library(ggplot2)
 # library(caret)
 
 
+##########################################
+# global variables 
+##########################################
+splits = 10000
+N_CORES <- detectCores()
 imputation = T
 with_sui2 = T
 
 source(paste(getwd(),"longitudinal/Load_DB.R", sep = "/"))
 source(paste(getwd(),"longitudinal/Combined.R", sep = "/"))
-# source(paste(getwd(),"functions_util.R", sep = "/"))
+source(paste(getwd(),"functions_util.R", sep = "/"))
 source(paste(getwd(),"algorithm_util.R", sep = "/"))
 
 
