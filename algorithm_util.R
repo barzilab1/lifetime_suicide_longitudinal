@@ -97,27 +97,34 @@ run_rf_ridge = function(x,y,features_names){
 
 }
 
-opt.cut.roc_ = function(fpr, sen, cutoff){
+opt.cut.roc_ = function(fpr, sen,d){
   
-  d = (fpr - 0)^2 + (sen-1)^2
   ind = which(d == min(d))
   # in case (0,0) (1,1) were selected, take spec = 1, sen =0 (0,0)  
-  if (length(ind) == 2 & ind[1]==1 & ind[2]==length(fpr)){
+  if (length(ind) == 2 & ind[2]==length(fpr)){
     ind=ind[1]
-  }else if(length(ind) > 1 & ind[length(ind)] != length(fpr)){
-    #there are a few points with the same distance from (0,1), but it is not (0,0) (1,1)
-    ind = ind[length(ind)]
+  # }else if(length(ind) > 1 & ind[length(ind)] != length(fpr)){
+  #   #there are a few points with the same distance from (0,1), but it is not (0,0) (1,1)
+  #   ind = ind[length(ind)]
   }else if(length(ind) > 1){
     ind=ind[1]
   }
   
-  c(sensitivity = sen[[ind]], specificity = 1-fpr[[ind]], cutoff = cutoff[[ind]], ind = ind)
+  c(sensitivity = sen[[ind]], specificity = 1-fpr[[ind]], ind = ind)
 }
 
 #finds the closest point to (0,1) on the ROC curve
 opt.cut.roc = function(perf){
   
-  cut.ind = opt.cut.roc_(perf@x.values[[1]], perf@y.values[[1]], perf@alpha.values[[1]])
+  d = (perf@x.values[[1]] - 0)^2 + (perf@y.values[[1]]-1)^2
+  opt.cut.roc_(perf@x.values[[1]], perf@y.values[[1]],d)
+}
+
+#finds the closest point to 80% sen on the ROC curve
+sen80.cut.roc = function(perf){
+  
+  d = abs((perf@y.values[[1]] - 0.8))
+  opt.cut.roc_(perf@x.values[[1]], perf@y.values[[1]],d)
 }
 
 ##########################################
@@ -131,8 +138,6 @@ run_lasso <- function(x,y) {
   #initialize params 
   features <- matrix(0,nrow = ncol(x), ncol = 1)
   rownames(features) <- paste(colnames(x))
-  
-  number_of_features = c(0,0)
   
   lasso_measurements = matrix(NA,6,splits)
   rownames(lasso_measurements) = c("auc","sen","spe","acc","ppv","npv")
@@ -184,10 +189,6 @@ run_lasso <- function(x,y) {
     coefs <- coef(mod, s=opt_lambda)
     #get all selected features not including the intercept 
     features[coefs@Dimnames[[1]][ which(coefs != 0 ) ][-1],1] = features[coefs@Dimnames[[1]][ which(coefs != 0 ) ][-1],1] +1
-    #how many were selected 
-    number_of_features[1] = number_of_features[1] + (length (which(coefs != 0 ) ) -1)
-    #add one to the number of times more than 1 feature was selected 
-    number_of_features[2] = ifelse( length(which(coefs != 0 ) ) > 1 , number_of_features[2] +1, number_of_features[2] )
     
     y_predicted <- predict(mod, s = opt_lambda, newx = as.matrix(X_test),type ="response")
     pred <- prediction(y_predicted, y_test)
@@ -214,16 +215,10 @@ run_lasso <- function(x,y) {
     lasso_measurements["ppv",i] = perf_npv_ppv@x.values[[1]][ind]  
     
     
-    #the 80% sensitivity 
-    d = abs((perf@y.values[[1]] - 0.8))
-    ind = which(d == min(d))
-    if(length(ind)>1){
-      #take the index with the biggest specificity 
-      ind=ind[1]
-    } 
-
-    lasso_80_sen[i,1] = perf@y.values[[1]][ind]
-    lasso_80_sen_spe[i,1] = 1 - perf@x.values[[1]][ind]
+    #find closest point to 80% sensitivity 
+    results = sen80.cut.roc(perf)
+    lasso_80_sen[i,1] = results["sensitivity"]
+    lasso_80_sen_spe[i,1] = results["specificity"]
     
     #in case the edges were selected (sen=1, spe=0), replace them as always prefer tests with high spec
     if(lasso_80_sen[i,1] ==1 & lasso_80_sen_spe[i,1] ==0){
@@ -249,8 +244,7 @@ run_lasso <- function(x,y) {
   
   # avg. number of selected features. 
   cat("\nAvg. selected features")
-  cat("\nall 10k models: " , number_of_features[1]/splits, sep = "\t")  
-  cat("\nonly models that selected features: " , number_of_features[1]/number_of_features[2], sep = "\t")  
+  cat("\nall 10k models: " , sum(features)/splits, sep = "\t")  
   cat("\n")
   
   #get measurements closest to (0,1)
@@ -267,7 +261,7 @@ run_lasso <- function(x,y) {
   cat("\n")
   
   return(list(features = features,
-              number_selected = ceiling(number_of_features[1]/splits),
+              number_selected = ceiling(sum(features)/splits),
               auc = mean(lasso_measurements["auc",])
               ))
 }
@@ -384,9 +378,6 @@ run_stir <- function(x,y) {
   cl = makeCluster(N_CORES, type="FORK")
   registerDoParallel(cl)
   
-  features <- matrix(0,nrow = ncol(x), ncol = 1)
-  rownames(features) <- paste(colnames(x))
-  
   results_list = foreach(i = seq(splits), .packages=c('stir','caTools') ) %dopar% {
    
       set.seed(i) # to keep iterations consistent
@@ -421,22 +412,21 @@ run_stir <- function(x,y) {
   
   #get selected features
   res = table(unlist(results_list))
+  features <- matrix(0,nrow = ncol(x), ncol = 1)
+  rownames(features) <- paste(colnames(x))
   features[names(res),] =  data.frame(res,row.names = names(res))$Freq
   #how many were selected 
   tot_number = sum(res)
-  #the number of times more than 1 feature was selected 
-  tot_selected_model = sum(sapply(results_list, function(x){ length(x)>0}))
   
   
   cat("\n\nSelected Features According to Relieff\n")
-  features = features[order(features[,1], decreasing = TRUE),,drop=FALSE]
+  features = features[order(features, decreasing = TRUE),,drop=FALSE]
   print(features)
-  plot(features[,1] ,xlab="" ,ylab="Frequency", xaxt="n" , main="stir", pch = 19)
+  plot(features ,xlab="" ,ylab="Frequency", xaxt="n" , main="stir", pch = 19)
   axis(1, at=1:nrow(features), labels=rownames(features))
   
   cat("\n Avg. selected features")
   cat("\nall 10k models: " , tot_number/splits, sep = "\t")  
-  cat("\nonly models that selected features: " , tot_number/tot_selected_model, sep = "\t")  
   cat("\n")
   
   return(list(features = features,
@@ -459,8 +449,6 @@ run_RF <- function(x,y) {
   
   rf_measurements = matrix(NA,6,splits)
   rownames(rf_measurements) = c("auc","sen","spe","acc","ppv","npv")
-  
-  number_of_features = c(0,0)
   
   set.seed(42)
   for (i in 1:splits) {

@@ -3,19 +3,30 @@ library(missForest)
 library(psych)
 
 
-# library(qgraph)
+library(ggplot2)
 # library(pscl)
 # library(caret)
 
 
-imputation = F
+imputation = T
 with_sui2 = T
 
 source(paste(getwd(),"longitudinal/Load_DB.R", sep = "/"))
 source(paste(getwd(),"longitudinal/Combined.R", sep = "/"))
-source(paste(getwd(),"functions_util.R", sep = "/"))
+# source(paste(getwd(),"functions_util.R", sep = "/"))
+source(paste(getwd(),"algorithm_util.R", sep = "/"))
 
 
-source(paste(getwd(),"longitudinal/step_1.R", sep = "/"))
+
+x_total = merge(Y_bucket, combined_bucket)
+
+y = x_total[,2]
+x = x_total[,-c(1:5)]
+
+#TODO table 1
+
+# source(paste(getwd(),"step_1.R", sep = "/"))
+source(paste(getwd(),"step_2.R", sep = "/"))
+# source(paste(getwd(),"step_3.R", sep = "/"))
 
 
