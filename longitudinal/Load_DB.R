@@ -1,5 +1,5 @@
 
-#read the CSV. 
+#read the CSVs
 PHQ_Data = read_csv("Data/PHQ9_file_for_Elina_with_PNC_FH.csv")
 PNC_Core_Data_clinical = read_csv("Data/PNC_Core_Data_clinical.csv")
 PNC_Core_Data_cognitive = read_csv("Data/PNC_Core_Data_cognitive.csv")
@@ -12,9 +12,9 @@ GO1_grade_repeats = read_csv("Data/GO1_grade_repeats.csv")
 SepDivorce = read_csv("Data/SepDivorce.csv")
 Sips_Extras = read_csv("Data/sips_extras.csv")
 
-#################
-####build buckets 
-#################
+################
+# build buckets 
+################
 
 ###Y_bucket
 Y_bucket = PHQ_Data[,c("bblid","Current_Suicidal_Ideation","Lifetime_Suicide_Attempt" , "Depression_mod_above_at_phq", "PHQ9_Sum")]
@@ -27,9 +27,9 @@ Y_bucket[,c("Current_Suicidal_Ideation","Lifetime_Suicide_Attempt")] = Y_bucket[
 ###EDU
 Edu_info = merge(GOASSESS_Timeline[,1:2],GO1_grade_repeats)
 #get bblid
-t = do.call('rbind', strsplit(as.character(Edu_info$redcapid),'_',fixed=TRUE))
-Edu_info$bblid = t[,1]
-Edu_info$suffix = t[,2]
+temp = do.call('rbind', strsplit(as.character(Edu_info$redcapid),'_',fixed=TRUE))
+Edu_info$bblid = temp[,1]
+Edu_info$suffix = temp[,2]
 Edu_info = merge(Y_bucket[,"bblid", drop = F],Edu_info)
 
 #combine rows with the same bblid

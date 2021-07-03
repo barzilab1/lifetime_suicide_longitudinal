@@ -1,4 +1,5 @@
- 
+library(caTools)
+
 find_opt_cut_roc_ = function(fpr, sen,d){
   
   ind = which(d == min(d))
@@ -51,25 +52,31 @@ rank_features = function(res_lasso,res_Relieff,res_rf){
   
   all_features$mean_rank = round(rowMeans(all_features[,c("rank_lasso", "rank_Relieff", "rank_rf")]), digits = 3)
   
-  write.csv(all_features, "all_selected_features.csv", row.names = F)
+  write.csv(all_features, "output/all_selected_features.csv", row.names = F)
   return(all_features)
 }
 
 
 find_biggest_gap = function(values){
+  
+  ordered_values = values[order(values,decreasing = T)]
+  
   ind = 0
   diff = 0
   
-  for (i in 1:(length(values)-1)){
-    current_diff = (values[i] - values[i+1])
+  for (i in 1:(length(ordered_values)-1)){
+    current_diff = (ordered_values[i] - ordered_values[i+1])
     if(current_diff > diff){
       diff = current_diff
-      ind = i
+      ind = names(ordered_values)[i]
     }
   }
-  print(paste0("rf diff:", names(diff)))
+  
+  print(paste0("rf diff:", current_diff))
   print(paste0("rf ind:", ind))
-  ind
+  print(paste0("rf value:", ordered_values[ind]))
+  
+  return(ordered_values[ind])
 }
 
 # y: the main variable to check significance with 
@@ -87,3 +94,28 @@ check_significance = function(y,data,main_text){
   }
   print(results)
 }
+
+calculate_measurments = function(pred) {
+  measurements = c()
+  #auc
+  measurements["auc"] = performance(pred, measure = "auc")@y.values[[1]]
+  
+  #calculate sensitivity and specificity
+  perf <- performance(pred,"tpr","fpr")
+  
+  #find closest point to (0,1)
+  results = find_opt_cut_roc(perf)
+  measurements["sen"] = results["sensitivity"]
+  measurements["spe"] = results["specificity"]
+  ind = results["ind"]
+  
+  #calculate NPV and PPV
+  perf_npv_ppv = performance(pred, "npv", "ppv" )
+  # measurements["ppv"] = perf_npv_ppv@x.values[[1]][ind]
+  measurements["npv"] = perf_npv_ppv@y.values[[1]][ind] 
+  measurements["ppv"] = perf_npv_ppv@x.values[[1]][ind]
+  
+  
+  return (measurements)
+}
+

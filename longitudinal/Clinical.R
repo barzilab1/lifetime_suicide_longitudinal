@@ -5,11 +5,11 @@ summary(Clinical_bucket[,-1])
 Clinical_bucket = Clinical_bucket[,-which(colnames(Clinical_bucket) == "ptd009.x")]
 
 # 3 rows have only the summary variables [medical vars that might be assessed by a different doc]  
-t = Clinical_bucket[,c(2:117)]
-nrow(t[rowSums(is.na(t)) == 116,])
+temp = Clinical_bucket[,c(2:117)]
+nrow(temp[rowSums(is.na(temp)) == 116,])
 # 4 rows missing all the summary variables [gaf- score between 0-100 (good), 50 bad, relates to the goassess]
-t = Clinical_bucket[,c(119:126)]
-nrow(t[rowSums(is.na(t)) == 8,])
+temp = Clinical_bucket[,c(119:126)]
+nrow(temp[rowSums(is.na(temp)) == 8,])
 
 
 #how many repeat a grade
@@ -23,9 +23,9 @@ boxplot(Clinical_bucket[,c(118)])
 summary(Substance_bucket)
 
 #total isn't a summary.  
-t = GO1_Substance_Use[,c("subs_smry_sub_alc","subs_smry_sub_mar")]
-t$remaining_sum = GO1_Substance_Use$subs_smry_sub_tot - rowSums(GO1_Substance_Use[,c(78:86)],na.rm = TRUE)
-t$subs_smry_sub_mar[is.na(t$subs_smry_sub_mar)] = 0
+temp = GO1_Substance_Use[,c("subs_smry_sub_alc","subs_smry_sub_mar")]
+temp$remaining_sum = GO1_Substance_Use$subs_smry_sub_tot - rowSums(GO1_Substance_Use[,c(78:86)],na.rm = TRUE)
+temp$subs_smry_sub_mar[is.na(temp$subs_smry_sub_mar)] = 0
 # lm(data=t[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc)),], remaining_sum ~ subs_smry_sub_mar )
 # which(t$subs_smry_sub_mar[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))] != t$remaining_sum[(t$subs_smry_sub_alc==0 | is.na(t$subs_smry_sub_alc))])
 

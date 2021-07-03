@@ -23,12 +23,12 @@ Demographics_bucket = subset(Demographics_bucket, select=-c(race2))
 Demographics_bucket[,c("sex","ethnicity")] =  Demographics_bucket[,c("sex","ethnicity")] -1
 
 #tml007: What is your grade in school? (or, if not in school, last completed grade)
-t = floor(Demographics_bucket$age/12) - Demographics_bucket$tml007
-summary(t) #range [4,7]
-t = Demographics_bucket$edu1 - Demographics_bucket$tml007
-summary(t) #range [-2,1]
-t = floor(Demographics_bucket$age/12) - Demographics_bucket$edu1
-summary(t) #range [5,8]
+temp = floor(Demographics_bucket$age/12) - Demographics_bucket$tml007
+summary(temp)  #range [4,7]
+temp = Demographics_bucket$edu1 - Demographics_bucket$tml007
+summary(temp)  #range [-2,1]
+temp = floor(Demographics_bucket$age/12) - Demographics_bucket$edu1
+summary(temp)  #range [5,8]
 
 # remove edu1
 Demographics_bucket = subset(Demographics_bucket, select=-c(edu1))

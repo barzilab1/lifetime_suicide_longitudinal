@@ -3,9 +3,10 @@
 #################################
 
 # (1) run the 3 algo on combine bucket
-res_lasso = run_lasso(x,y)
-res_Relieff = run_stir(x,y)
-res_rf = run_RF(x,y)
+res = run_lasso_stir_rf(x,y)
+res_lasso = res$lasso
+res_Relieff = res$stir
+res_rf = res$rf
 
 
 
@@ -14,15 +15,15 @@ ranked_features = rank_features(res_lasso,res_Relieff,res_rf)
 
 features_list = list()
 
-features_list$lasso   =  ranked_features$feature[ranked_features$rank_lasso   > (193-res_lasso$number_selected)]
-features_list$relieff =  ranked_features$feature[ranked_features$rank_Relieff > (193-res_Relieff$number_selected)]
+features_list$lasso   =  ranked_features$feature[ranked_features$rank_lasso   > (193 - res_lasso$number_selected)]
+features_list$relieff =  ranked_features$feature[ranked_features$rank_Relieff > (193 - res_Relieff$number_selected)]
 
 print(paste0("\nNumber chosen lasso: ", length(features_list$lasso)))
 print(paste0("\nNumber chosen relieff: ", length(features_list$relieff)))
 
 
-rf_index = find_biggest_gap(res_rf$features[,1])
-features_list$rf = rownames(res_rf$features)[1:rf_index]
+rf_bigest_score = find_biggest_gap(res_rf$features[,1])
+features_list$rf = ranked_features$feature[ranked_features$score_rf >= rf_bigest_score]
 
 # (3) get subset from mean rank
 mean_rank_features = ranked_features[order(ranked_features[["mean_rank"]], decreasing = TRUE),c("feature"),drop = F]
@@ -33,12 +34,14 @@ for (i in c(5,10,15,20,25,30,35)){
   
 }
   
-write.csv(df,"output/features_list.csv",row.names = F)
+temp = sapply(features_list, '[', seq(max(lengths(features_list))))
+write.csv(temp,"output/features_list.csv",row.names = F, na = "")
 
 
 
 lasso_index = length(features_list$lasso)
 relieff_index = length(features_list$relieff)
+rf_index = length(features_list$rf)
 
 ind = 1
 #print 

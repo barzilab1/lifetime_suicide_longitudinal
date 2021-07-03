@@ -1,7 +1,7 @@
 library(readr)
 library(missForest)
 library(psych)
-
+library(doParallel)
 
 library(ggplot2)
 # library(pscl)

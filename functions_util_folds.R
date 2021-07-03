@@ -1,37 +1,14 @@
-
+library(openxlsx)
 
 # global variables of the below functions
 N_FOLDS = 10
 
-
-calculate_measurments <- function(pred) {
-  measurements = c()
-  #auc
-  measurements["auc"] <- performance(pred, measure = "auc")@y.values[[1]]
-  
-  #calculate sensitivity and specificity
-  perf <- performance(pred,"tpr","fpr")
-  
-  #find closest point to (0,1)
-  results = opt.cut.roc(perf, pred)
-  measurements["sen"] = results["sensitivity",1]
-  measurements["spe"] = results["specificity",1]
-  ind = results["ind",1]
-  
-  #calculate NPV and PPV
-  perf_npv_ppv = performance(pred, "npv", "ppv" )
-  measurements["npv"] = perf_npv_ppv@y.values[[1]][ind] 
-  measurements["ppv"] = perf_npv_ppv@x.values[[1]][ind] 
-  
-  return (measurements)
-}
 
 
 # x: all features 
 # y: the outcome variable
 run_algos <- function(x,y) {
   
-  h2o.init()
   set.seed(42)
   
   #create folders of y
@@ -39,13 +16,10 @@ run_algos <- function(x,y) {
   
   ridge_measurements = list()
   rf_measurements = list()
-  automl_measurements = list() 
   ridge_measurements$lasso = list()
   rf_measurements$lasso = list()
-  automl_measurements$lasso = list()
   ridge_measurements$relieff = list()
   rf_measurements$relieff = list()
-  automl_measurements$relieff = list()
   
   for (j in c("mean_rank","rank_rf")){
     for (i in c(5,10,13,14,15,20,25,30,35,40,45)){
@@ -53,7 +27,6 @@ run_algos <- function(x,y) {
       col_name = paste(j,i,sep = "_" )
       ridge_measurements[[col_name]] = list()
       rf_measurements[[col_name]] = list()
-      automl_measurements[[col_name]] = list()
       
     }
   }
@@ -139,7 +112,7 @@ run_algos <- function(x,y) {
     
     #' (6) for each subst:
     #' - train rf/ridge on training dataset
-    #' - calculate all mesurments for testing dataset
+    #' - calculate all measurements for testing dataset
     #' - check statistically difference? 
     #' outputs: 
     #' for each fold, the mesurmentsx2
@@ -174,46 +147,6 @@ run_algos <- function(x,y) {
       
       rf_measurements[[j]][[f_index]] = calculate_measurments(pred)
       
-      ###autoML
-      train_h2o <- as.h2o(data.frame(train_data,Lifetime_Suicide_Attempt = y_train))
-      test_h2o <- as.h2o(data.frame(test_data,Lifetime_Suicide_Attempt = y_test))
-      
-      train_h2o[,"Lifetime_Suicide_Attempt"] = as.factor(train_h2o[,"Lifetime_Suicide_Attempt"])
-      test_h2o[,"Lifetime_Suicide_Attempt"] = as.factor(test_h2o[,"Lifetime_Suicide_Attempt"])
-      
-      aml <- h2o.automl(y = "Lifetime_Suicide_Attempt",
-                        training_frame = train_h2o,
-                        nfolds = 10,
-                        # max_runtime_secs = 60,
-                        stopping_metric= "AUC",
-                        seed = 101)
-      lb <- aml@leaderboard
-      print(lb, n = nrow(lb))
-      
-      leader_model = aml@leader
-      
-      if(grepl("StackedEnsemble", leader_model@model_id)){
-        metalearner <- h2o.getModel(leader_model@model$metalearner$name)
-        h2o.varimp_plot(metalearner)
-      }else{
-        h2o.varimp_plot(leader_model)
-      }
-      
-      perf <- h2o.performance(leader_model, test_h2o)
-      
-      measurements = c()
-      measurements["auc"] <- h2o.auc(perf)
-      #find closest point to (0,1)
-      results = opt.cut.roc_(h2o.fpr(perf)[,2], h2o.sensitivity(perf)[,2], h2o.sensitivity(perf)[,1])
-      measurements["sen"] = results["sensitivity"]
-      measurements["spe"] = results["specificity"]
-      ind = results["ind"]
-      mes = perf@metrics$thresholds_and_metric_scores[ind,]
-      measurements["npv"] = as.double(mes["tns"]/(mes["tns"]+mes["fns"]))
-      measurements["ppv"] = h2o.precision(perf)[ind,2]
-      
-      
-      automl_measurements[[j]][[f_index]] = measurements
       
     }
     
@@ -228,19 +161,15 @@ run_algos <- function(x,y) {
     
     sheet_name_ridge = paste("ridge",j ,sep = "__" )
     sheet_name_rf = paste("rf",j ,sep = "__" )
-    sheet_name_automl = paste("automl",j ,sep = "__" )
     
     addWorksheet(wb, sheet_name_ridge)
     addWorksheet(wb, sheet_name_rf)
-    addWorksheet(wb, sheet_name_automl)
     
     writeData(wb, sheet_name_ridge, as.data.frame(ridge_measurements[[j]]), rowNames = T)
     writeData(wb, sheet_name_rf, as.data.frame(rf_measurements[[j]]), rowNames = T)
-    writeData(wb, sheet_name_automl, as.data.frame(automl_measurements[[j]]), rowNames = T)
   }
   
   saveWorkbook(wb, "res/results.xlsx", overwrite = TRUE)
-  h2o.shutdown()
-  Y
+  
    
 }
